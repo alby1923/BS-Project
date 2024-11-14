@@ -6,18 +6,13 @@ library(tidyr)
 library(purrr)
 
 # Split of the dataset in time-variant variables and time invariant
-df_Arrigoni <- readRDS("final_dataset.rds")
-View(df_Arrigoni)
-colnames(df_Arrigoni)
+df_Arrigoni <- readRDS("cleaned_dataset.rds")
 df_timeinv <- df_Arrigoni[, c("CAI", "SESSO", "DATA_NASCITA", "Rh", "AB0")]
-View(df_timeinv)
-df_bloodvalues <- df_Arrigoni %>% select( -SESSO, -DATA_NASCITA, -Rh, -AB0, 
-                                          -Basofili_perc, -Data_Basofili_perc, 
+df_bloodvalues <- df_Arrigoni %>% select( -SESSO, -DATA_NASCITA, -Rh, -AB0,
                                           -Eta_glucosio, -Eta_colesterolo, 
                                           -Eta_trigliceridi, -Eta_circonferenza, 
                                           -Eta_PMAX, -Eta_min)
 df_bloodvalues <- as.data.frame(df_bloodvalues)
-View(df_bloodvalues)
 
 # convert all in list to make code easier
 for(i in 1:nrow(df_bloodvalues)){
@@ -37,16 +32,16 @@ for (i in 1:nrow(df_bloodvalues)) {
 
 # Date e valori corrispondenti
 colonne_date <- grep("^Data_", names(df_bloodvalues), value = TRUE)
-colonne_date
+#colonne_date
 colonne_valori <- sub("^Data_", "", colonne_date)
-colonne_valori
+#colonne_valori
 
 
 # Pairs to flatten
 variable_pairs <- lapply(seq_along(colonne_date), function(i) {
   list(date = colonne_date[i], observation = colonne_valori[i])
 })
-variable_pairs
+#variable_pairs
 
 # Function to determine the type of elements within a list column, checking for specific types
 get_list_type <- function(column) {
@@ -153,3 +148,4 @@ df_wide <- df_long_agg %>%
 # Convert Date column to Date type
 df_wide$Date <- as.Date(df_wide$Date)
 
+saveRDS(df_wide,'flattened_dataset.rds')
