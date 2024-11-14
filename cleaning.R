@@ -1,10 +1,11 @@
-#load data
+#LOAD DATA ------------
 df <- readRDS('final_dataset.RDS')
 
 #remove columns with all NULL values
 df <- df[,-c(42,43)]
 df$SESSO <- as.factor(df$SESSO)
 
+#DATA INSPECTION -----------
 #for each column (if numeric) we find the minimum and maximum values among all observation and save also the related id
 not_numeric_columns <- c()
 for (col in 1:ncol(df)){
@@ -35,6 +36,29 @@ print('---------------')
 for(col in not_numeric_columns){
   cat(colnames(df)[col])
   cat('\n')
+}
+
+#we saw some zeros, hence we will check how many 
+ferritina <- df$Ferritina
+eosinofili <- df$Eosinofili_perc
+for(i in 1:nrow(df)){
+  vec <- na.omit(ferritina[[i]])
+  flag <- 0
+  for(j in 1:length(na.omit(ferritina[[i]])))
+    if(vec[j]==0)
+      flag=1
+  if(flag==1)
+    cat('obs ',i,'has a null value')
+}
+
+for(i in 1:nrow(df)){
+  vec <- na.omit(eosinofili[[i]])
+  flag <- 0
+  for(j in 1:length(na.omit(eosinofili[[i]])))
+    if(vec[j]==0)
+      flag = flag+1
+  if(flag>=1)
+    cat('obs ',i,'has ',flag, 'null values\n')
 }
 
 #we saw a negative value, so we will check the observations with negative values in that column
@@ -70,46 +94,11 @@ while(flag){
 }
 #everything is fine
 
-#we compute variances for numeric columns so to spot the vectors with anomalous values
-#first we save the indexes of numeric columns
-numeric_columns <- setdiff(1:81, not_numeric_columns)
-known_columns <- c(13,15,61,63,65)
-indexes_to_remove <- c()
+#OUTLIERS DETECTION ----------------
+#to fix the heights the smartest choice is to replace in the vectors all the values with the mode, 
+#because it is unlikely that someone significantly dropped or grew
 
-for(col in 1:ncol(df)){
-  if (col %in% not_numeric_columns | col %in% known_columns | col==1) { #we treat known columns in a different way, and we don't consider CAI variable
-    next  #next iteration if column not numeric
-  }
-  cat('\n--------------------\n')
-  cat('colonna ',colnames(df)[col])
-  vars <- c() #create an auxiliary vector
-  for(j in 1:nrow(df)){
-    if(length(df[[col]][[j]])>1) #need at least 2 value to compute variance
-    vars <- c(vars,var(df[[col]][[j]])) #compute variance of the i-th vector in j-th column
-    else vars <- c(vars,0) #if the length is 1, then we have 1 value and so variance is zero
-  }
-  #once you have a vector with all variances, we compute z-scores to see if there are outliers (so vectors with really high variances)
-  # Calculate mean and standard deviation of variances
-  mean_var <- mean(vars)
-  sd_var <- sd(vars)
-  # Calculate Z-scores
-  z_scores <- (vars - mean_var) / sd_var
-  # Find observations with high Z-scores
-  outliers <- which(abs(z_scores) > 15) #how much to set?? 15 means that the value is 15 standard deviations far from the mean (15 is HUGE, usually as a rule of
-  #thumb a value higher than 3 si considered an outlier)
-  if(length(outliers)>=1) #if there are no outliers nothing to print
-  for(k in 1:length(outliers))
-    cat('\n values of the outlier ',outliers[k],'with z-score ',z_scores[outliers[k]],': ',df[[col]][[outliers[k]]]) #print the vector of values of the outlier
-  indexes_to_remove <- c(indexes_to_remove,outliers) #observation to remove
-}
-indexes_to_remove <- unique(indexes_to_remove) #removes eventual duplicates
-length(indexes_to_remove) #see how many observations you would remove
-#which value to choose for z_score?? are we really sure to remove anything since we don't have a medical background?? let's talk about it...
-
-#to fix the heights the smartest choice is to replace in the vectors all the values with the mode, because it is unlikely that someone significantly dropped or grew
-known_columns <- c(13,63,65) #remove the index of the height and circ. vita
-col <- 61
-
+##HEIGHT ----------------
 #function mode doesn't esist in R
 moda <- function(x) {
   unique_x <- unique(x)                 
@@ -118,6 +107,7 @@ moda <- function(x) {
   return(moda_value)
 }
 
+col <- 61
 for(i in 1:nrow(df)){
   modav <- moda(df[[col]][[i]])
   for(j in 1:length(df[[col]][[i]])){
@@ -125,71 +115,101 @@ for(i in 1:nrow(df)){
   }
 } 
 
-#from visual inspection, circ. vita needs to be fixed in just one obs
-df$Circonferenza_vita[[744]][3] <- 106 #found by previous inspection (run following code)
-
-#saves <- df
-#df <- saves
-
-for(iter in 1:5){#by visual inspection, 5 seems to be enough
-  cat('\n\n\n ITERATION NUMBER ',iter,'\n\n')
-  if(iter==3)
-    known_columns <- c(63,65) #PMAX fixes after 2 iterations
-for(col in known_columns){
-  cat('\n--------------------\n')
-  cat('colonna ',colnames(df)[col])
-  vars <- c() #create an auxiliary vector
-  for(j in 1:nrow(df)){
-    if(length(df[[col]][[j]])>1) #need at least 2 value to compute variance
-      vars <- c(vars,var(df[[col]][[j]])) #compute variance of the i-th vector in j-th column
-    else vars <- c(vars,0) #if the length is 1, then we have 1 value and so variance is zero
-  }
-  #once you have a vector with all variances, we compute z-scores to see if there are outliers (so vectors with really high variances)
-  # Calculate mean and standard deviation of variances
-  mean_var <- mean(vars)
-  sd_var <- sd(vars)
-  # Calculate Z-scores
-  z_scores <- (vars - mean_var) / sd_var
-  # Find observations with high Z-scores
-  outliers <- which(abs(z_scores) > 5)
-  if(length(outliers)>=1) #if there are no outliers nothing to print
-    for(k in 1:length(outliers))
-      cat('\n values of the outlier ',outliers[k],'with z-score ',z_scores[outliers[k]],': ',df[[col]][[outliers[k]]]) #print the vector of values of the outlier
-  for(l in outliers){ #for each outlier we take the index of the maximum or minimum (depends which is the farthest one from the median) and we substitute
-    #that value with the median (rounded) of that vector
-    if(max(df[[col]][[l]] - median(df[[col]][[l]])) > abs(min(df[[col]][[l]] - median(df[[col]][[l]]))))
-    idx <- which.max(df[[col]][[l]])
-    else idx <- which.min(df[[col]][[l]])
-    df[[col]][[l]][[idx]] <- round(median(df[[col]][[l]]))
-  }
-}
-}
-#here the problem is that you need to run this for loop multiple times to detect all the outliers, but it is not the same amount of times for all the columns,
-#hence we need to do experiments (visual inspect if everything seems fine) to see how many times is needed for each column
-
-#count the NA and for each cell it says how many NA there are in the vector
-conta_na <- function(df) {
-  #matrix initialization
-  na_count_matrix <- matrix(0, nrow = nrow(df), ncol = ncol(df),
-                            dimnames = list(rownames(df), colnames(df)))
-  
-  for (i in 1:nrow(df)) {
-    for (j in 1:ncol(df)) {
-      # Conta i NA nel vettore nella cella (i, j)
-      na_count_matrix[i, j] <- sum(is.na(df[[j]][[i]]))
+##PESO+CIRCONFERENZA VITA -----
+rileva_e_correggi_spike <- function(serie,soglia){
+  flag = 0
+  if(length(serie)<3){
+    med <- median(serie)
+    diff <- abs(serie - med)
+    if(any(diff > soglia)){
+      flag <- 1
+      serie[which(diff>soglia)] <- med
     }
   }
-  
-  return(na_count_matrix)
+  else for(i in 2:(length(serie)-1)){
+    aux <- c(serie[i-1],serie[i],serie[i+1])
+    med <- median(aux)
+    diff <- abs(aux - med)
+    if(any(diff > soglia))
+      flag <- 1
+      if(diff[1]>soglia)
+        serie[i-1] <- med
+    if(diff[2]>soglia)
+      serie[i] <- med
+    if(diff[3]>soglia)
+      serie[i+1] <- med
+  }
+  return(list(serie = serie, spike = flag))
 }
 
-na_matrix <- conta_na(df)
-sum(na_matrix > 0) #how many cells have a value larger than zero
+#if in a sliding window of three it occurs a peak or a drop of more than 20 (or 30) it is swapped withe the median of that window
+for(i in 1:nrow(df)){
+to_print <- df$Peso[[i]]
+risultato <- rileva_e_correggi_spike(df$Peso[[i]],20)
+#print observation in which a change occurred
+if(risultato$spike == 1){
+  df$Peso[[i]] <- risultato$serie
+cat('osservazione ',i,'\n')
+cat("Serie originale:", to_print, "\n")
+cat("Serie corretta:", risultato$serie, "\n\n\n")
+}
+}
 
+for(i in 1:nrow(df)){
+  to_print <- df$Circonferenza_vita[[i]]
+  risultato <- rileva_e_correggi_spike(df$Circonferenza_vita[[i]],30)
+  #print observation in which a change occurred
+  if(risultato$spike == 1){
+    df$Circonferenza_vita[[i]] <- risultato$serie
+    cat('osservazione ',i,'\n')
+    cat("Serie originale:", to_print, "\n")
+    cat("Serie corretta:", risultato$serie, "\n\n\n")
+  }
+}
 
-#log transform numerical variables
+##PMAX+POLSO ----------
+#for PMAX and POLSO we correct values which are unrealistic with the median o
+out_of_bounds <- function(serie,lower_bound,upper_bound){
+  flag <- 0
+  if(any(serie < lower_bound) | any(serie > upper_bound)){
+    serie[which(serie<lower_bound | serie>upper_bound)] <- round(median(serie))
+    flag <- 1
+  }
+  return(list(serie = serie, flag = flag))
+}
 
+wrist <- df$Polso
+pmax <- df$PMAX
 
+#these bounds are as much conservative as possible. no-sense to accept values out of this considering blood donors are healthy
+for(i in 1:nrow(df)){
+  serie_polso <- out_of_bounds(wrist[[i]],40,120)
+  if(serie_polso$flag == 1){
+    cat('POLSO\n')
+    cat('osservazione ',i,'\n')
+    cat("Serie originale:", wrist[[i]], "\n")
+    cat("Serie corretta:", serie_polso$serie, "\n\n\n")
+    df$Polso[[i]] <- serie_polso$serie
+  }
+  serie_pmax <- out_of_bounds(pmax[[i]],40,180)
+  if(serie_pmax$flag == 1){
+    cat('PMAX\n')
+    cat('osservazione ',i,'\n')
+    cat("Serie originale:", pmax[[i]], "\n")
+    cat("Serie corretta:", serie_pmax$serie, "\n\n\n")
+    df$PMAX[[i]] <- serie_pmax$serie
+  }
+}
 
+#LOG-TRANSFORMATION OF RESPONSES -------------
+names <- c("Colesterolo_Hdl","Circonferenza_vita","Glucosio","PMAX","Trigliceridi")
+target_cols <- which(colnames(df) %in% names)
 
+for(index in target_cols){
+  for(i in 1:nrow(df)){
+    df[[index]][[i]] <- log(df[[index]][[i]]) 
+  }
+}
 
+#CREATE FINAL FILE --------------
+saveRDS(df,'cleaned_dataset.rds')
