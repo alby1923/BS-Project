@@ -3,11 +3,11 @@ library(ggplot2)
 
 df_wide <- readRDS('flattened_dataset.rds')
 
-#DATASET WITH ALL RESPONSES NOT NA --------
-rows_to_remove = c()
-names = c("Colesterolo_Hdl","Circonferenza_vita","Glucosio","PMAX","Trigliceridi")
-target_cols = which(colnames(df_wide) %in% names)
+#DATASET WITH NO NA IN GIVEN COLUMNS --------
 
+subset_dataset <- function(df_wide,names){
+rows_to_remove = c()
+target_cols = which(colnames(df_wide) %in% names)
 pb <- progress_bar$new(total = nrow(df_wide)) #just to visualize how much time remaining
 for(i in 1:nrow(df_wide)){
   flag <- 0
@@ -23,6 +23,13 @@ for(i in 1:nrow(df_wide)){
 }
 length(rows_to_remove)
 df <- df_wide[-rows_to_remove,]
+return(df)
+}
+
+names = c("Colesterolo_Hdl","Circonferenza_vita","Glucosio","PMAX","Trigliceridi")
+df_responses <- subset_dataset(df_wide,names)
+
+#FILLER OF NA IN DATASET ----------------
 
 #PLOT TO SEE HOW MANY NA -----------
 #create dataset with how many NA for each column
