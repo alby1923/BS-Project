@@ -188,10 +188,10 @@ df_filled <- fill_missing_values(
 # calculate rows with at least `threshold` missing values
 count_rows_with_na <- function(data, columns, threshold = 1) {
   if (!is.data.frame(data)) {
-    stop("The input 'data' must be a data frame or tibble.")
+    stop("input not data frame")
   }
   if (!all(columns %in% colnames(data))) {
-    stop("Some columns in 'columns' are not present in the data frame.")
+    stop("columns does not exist")
   }
   
   data %>%
