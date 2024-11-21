@@ -4,6 +4,37 @@ library(dplyr)
 
 df_wide <- readRDS('flattened_dataset.rds')
 
+#ADD FACTORS ---------
+df_to_add <- readRDS('cleaned_dataset.rds')
+#to modify in numerical
+#CHANGE FACTORS TO NUMERICAL VARIABLES
+# Define mappings for each factor column
+map_rh <- function(x) {
+  as.numeric(factor(x, levels = c("NEG", "POS"), labels = c(1, 2)))
+}
+
+map_AB0 <- function(x) {
+  as.numeric(factor(x, levels = c("0", "A", 'AB', 'B'), labels = c(1, 2, 3, 4)))
+}
+
+map_SESSO <- function(x) {
+  as.numeric(factor(x, levels = c("1", "2"), labels = c(1, 2)))
+}
+
+# Apply mappings to the respective columns
+df_to_add$Rh <- lapply(df_to_add$Rh, map_rh)
+df_to_add$AB0 <- lapply(df_to_add$AB0, map_AB0)
+df_to_add$SESSO <- lapply(df_to_add$SESSO, map_SESSO)
+
+# Convert lists to vectors if necessary (if the structure requires)
+df_to_add$Rh <- sapply(df_to_add$Rh, unlist)
+df_to_add$AB0 <- sapply(df_to_add$AB0 , unlist)
+df_to_add$SESSO <- sapply(df_to_add$SESSO, unlist)
+  
+# Merge based on the patient ID column
+df_to_add_subset <- df_to_add[, c('CAI','Rh','AB0','SESSO'), drop = FALSE]
+df_wide <- merge(df_wide, df_to_add_subset, by = 'CAI', all.x = TRUE)
+
 #STANDARDIZE COVARIATES -----------
 #needed to fix a little bug after flattening dataset
 
@@ -321,7 +352,10 @@ columns_to_keep <- c(
   "Alcool",
   "Attivita_fisica",
   "Circonferenza_vita",
-  "Fumo"
+  "Fumo",
+  'Rh',
+  'SESSO',
+  'AB0'
 )
 
 df_opt1 <- subset_dataset(df_responses_filled,columns_to_keep)
