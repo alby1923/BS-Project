@@ -25,18 +25,19 @@ model {
   //w ~ normal(0, sigma_w); //item random effects
   beta ~ normal(0,5);
   sigma_e ~ normal(0,5);
+  
   vector[T] mu;
+  mu = X * beta + b[subj];
   
   y ~ normal(mu, sigma_e);
 }
 generated quantities {
   //vector[T] log_lik; //log-likelihood
-  real log_lik;
-  //vector[T] y_hat; 
-  vector[T] mu;
-  
-   mu = X * beta + b[subj];
-   //y_hat = mu;
-   log_lik = normal_lpdf(y | mu, sigma_e); //prima passava tutto individuale, ora la somma, è ok?
+  //real log_lik;
+  vector[T] y_hat; 
+   vector[T] mu;
+
+   y_hat = X * beta + b[subj];
+   //log_lik = normal_lpdf(y | y_hat, sigma_e); //prima passava tutto individuale, ora la somma, è ok?
 
 }
