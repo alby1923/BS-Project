@@ -2,8 +2,8 @@ data {
   int<lower=1> N; //number of subjects
   int<lower=1> P; //number of covariates
   int<lower=1> T; //number of total observations = dates(first patient) + dates(second) + ...
-  int<lower=1> subj[N]; //subject id vector
-  int<lower=1> counter[N]; //exact number of observations for every patient
+  int<lower=1> subj[T]; //subject id vector
+  //int<lower=1> counter[N]; //exact number of observations for every patient
   real y[T]; //outcome
   matrix[T,P] X; //predictors
 }
@@ -14,6 +14,7 @@ parameters {
   real<lower=0> eta; //sd for subject intercepts
   real<lower=0> sigma_e; //error sd
   real mub;
+  
 }
 
 model {
@@ -24,33 +25,18 @@ model {
   //w ~ normal(0, sigma_w); //item random effects
   beta ~ normal(0,5);
   sigma_e ~ normal(0,5);
-  
-  
   vector[T] mu;
-  int index = 1;
-  for (t in 1:T) {
-    mu[t] = dot_product(X[t], beta) + b[subj[index]]; // Media prevista
-    if(t==counter[index]){
-     index = index + 1;
-    }
-  }
   
   y ~ normal(mu, sigma_e);
 }
 generated quantities {
-  vector[T] log_lik; //log-likelihood
-  vector[T] y_hat; 
- // vector[T] mu;
-  //vector[T] y;
+  //vector[T] log_lik; //log-likelihood
+  real log_lik;
+  //vector[T] y_hat; 
+  vector[T] mu;
   
-  int index = 1;
-  for (t in 1:T) {
-  //mu[t] = dot_product(X[t], beta) + b[subj[index]]; // Media prevista
-  //y[t] ~ normal(mu[t], sigma_e);
-   y_hat[t] = dot_product(X[t], beta) + b[subj[index]];
-    log_lik[t] = normal_lpdf(y[t] | y_hat[t], sigma_e);
-     if(t==counter[index]){
-      index = index + 1;
-    }
-  }
+   mu = X * beta + b[subj];
+   //y_hat = mu;
+   log_lik = normal_lpdf(y | mu, sigma_e); //prima passava tutto individuale, ora la somma, è ok?
+
 }
