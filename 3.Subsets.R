@@ -6,9 +6,36 @@ df_wide <- readRDS('flattened_dataset.rds')
 
 #STANDARDIZE COVARIATES -----------
 #needed to fix a little bug after flattening dataset
-df_wide$Alcool <- round(df_wide$Alcool)
-df_wide$Fumo <- round(df_wide$Fumo)
-df_wide$Attivita_fisica <- round(df_wide$Attivita_fisica)
+
+adjust_round <- function(vec) {
+  for (i in seq_along(vec)) {
+    if (!is.na(vec[i]) && vec[i] %% 1 != 0) {  #check value if not integer
+      # find preceding line not na
+      prev_value <- NA
+      for (j in seq(i - 1, 1, -1)) {
+        if (!is.na(vec[j])) {
+          prev_value <- vec[j]
+          break
+        }
+      }
+      
+      #round based on condition
+      if (!is.na(prev_value)) {
+        if (prev_value < vec[i]) {
+          vec[i] <- ceiling(vec[i])  # ceiling
+        } else {
+          vec[i] <- floor(vec[i])   # floor
+        }
+      }
+    }
+  }
+  return(vec)
+}
+
+df_wide$Alcool <- adjust_round(df_wide$Alcool)
+df_wide$Fumo <- adjust_round(df_wide$Fumo)
+df_wide$Attivita_fisica <- adjust_round(df_wide$Attivita_fisica)
+
 
 for(j in 1:ncol(df_wide)){
   if(!(j %in% c(1,2,6,18,22,32,36))){
@@ -132,29 +159,6 @@ df_filled <- fill_missing_values(
   delay_days = delay
 )
 
-# calculate rows with at least `threshold` missing values
-count_rows_with_na <- function(data, columns, threshold = 1) {
-  if (!is.data.frame(data)) {
-    stop("input not data frame")
-  }
-  if (!all(columns %in% colnames(data))) {
-    stop("columns does not exist")
-  }
-  
-  data %>%
-    dplyr::select(all_of(columns)) %>%  # Ensure using dplyr's select
-    rowwise() %>%
-    mutate(na_count = sum(is.na(c_across(everything())))) %>%  # Count NA in each row
-    ungroup() %>%
-    summarise(rows_with_na = sum(na_count >= threshold)) %>%  # Count rows meeting the threshold
-    pull(rows_with_na)
-}
-
-# Calculate for the initial dataset
-rows_with_na_initial <- count_rows_with_na(df_wide, columns_to_fill)
-rows_with_na_final <- count_rows_with_na(df_filled, columns_to_fill)
-rows_with_na_initial
-rows_with_na_final
 #DATASET WITH NO NA IN GIVEN COLUMNS --------
 
 subset_dataset <- function(df_wide,names){
@@ -165,6 +169,9 @@ for(i in 1:nrow(df_wide)){
   flag <- 0
   pb$tick()
   for(col in target_cols){
+    if(col == 'Date'){
+      next
+    }
     if(flag == 1)
       break
     if(is.na(df_wide[i, col])){
@@ -190,14 +197,29 @@ plot_na_counts <- function(df, variables, ylim_max) {
     NA_Count = sapply(variables, function(var) sum(is.na(df[[var]])))
   )
   
-  # Create barplot
-  plot <- ggplot(na_counts, aes(x = Variable, y = NA_Count)) +
-    geom_bar(stat = "identity", fill = "steelblue") +
-    labs(x = "Variable", y = "NA count", title = "Count of NA for each column") +
+  # Barplot
+  plot <- ggplot(na_counts, aes(x = reorder(Variable, NA_Count), y = NA_Count)) +
+    geom_bar(stat = "identity", aes(fill = NA_Count), width = 0.7, show.legend = FALSE) +
+    geom_text(aes(label = NA_Count), vjust = -0.5, size = 4, color = "black") +
+    scale_fill_gradient(low = "skyblue", high = "darkblue") +
+    labs(
+      x = "Variable",
+      y = "Count of NA"
+    ) +
     ylim(0, ylim_max) +
-    theme_minimal()
+    theme_minimal(base_size = 14) +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 12, color = "black"),
+      axis.text.y = element_text(size = 12, color = "black"),
+      axis.title = element_text(size = 14, face = "bold"),
+      panel.grid.major = element_blank(),  # Rimuove le linee di griglia principali
+      panel.grid.minor = element_blank(),  # Rimuove le linee di griglia minori
+      panel.background = element_blank(),  # Imposta lo sfondo del pannello su bianco
+      plot.background = element_blank()    # Imposta lo sfondo del grafico su bianco
+    )
   
-  
+  ggsave("NAresponses.pdf", plot, width = 10, height = 8, dpi = 300)
   # Print the plot
   print(plot)
 }
@@ -216,19 +238,44 @@ plot_na_percentages <- function(dataset) {
   # Ordina per percentuale decrescente
   na_data <- na_data[order(-na_data$NA_Percentage), ]
   
-  # Crea il grafico
-  ggplot(na_data, aes(x = reorder(Column, -NA_Percentage), y = NA_Percentage)) +
-    geom_bar(stat = "identity", fill = "steelblue") +
-    coord_flip() +
-    theme_minimal() +
-    labs(
-      title = "Percentuale di Valori Mancanti per Colonna",
-      x = "Colonne",
-      y = "Percentuale di NA (%)"
+  na_data$Highlight <- ifelse(na_data$NA_Percentage > 5, "Remove", "Keep")
+  
+  # Barplot
+  plot <- ggplot(na_data, aes(x = reorder(Column, -NA_Percentage), y = NA_Percentage)) +
+    geom_bar(
+      stat = "identity",
+      aes(fill = Highlight),
+      width = .85,
+      show.legend = FALSE
     ) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    scale_fill_manual(values = c("Remove" = "red", "Keep" = "steelblue")) +
+    geom_text(
+      aes(label = paste0(round(NA_Percentage, 1), "%")),
+      hjust = -0.1,
+      size = 3.5,
+      color = "black"
+    ) +
+    coord_flip() +
+    labs(
+      x = "Columns",
+      y = "Percentage of NA (%)"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+      axis.text.x = element_text(size = 12, color = "darkgray"),
+      axis.text.y = element_text(size = 12, color = "black"),
+      axis.title = element_text(size = 14, face = "bold"),
+      panel.grid.major = element_blank(),  # Rimuovi le linee di griglia orizzontali
+      panel.grid.minor = element_blank(),  # Rimuovi le linee di griglia minori
+      panel.background = element_blank(),  # Imposta lo sfondo del pannello su bianco
+      plot.background = element_blank()    # Imposta lo sfondo generale su bianco
+    ) +
+    ylim(0, max(na_data$NA_Percentage) + 5)  
+  
+  print(plot)
+  
+  ggsave("NApercentage.pdf", plot, width = 10, height = 8, dpi = 300)
 }
-
 
 plot_na_counts(
   df = df_wide, 
@@ -238,6 +285,8 @@ plot_na_counts(
 plot_na_percentages(df_responses_filled)
 #DATASET WITHOUT ANY NA IN A ROW ----------
 columns_to_keep <- c(
+  "CAI",
+  "Date",
   #"Alanina_aminotransferasi_alt",
   #"Albumina",
   "Altezza",
@@ -277,5 +326,35 @@ columns_to_keep <- c(
 
 df_opt1 <- subset_dataset(df_responses_filled,columns_to_keep)
 df_opt1 <- df_opt1[,columns_to_keep]
+
+#DELTA DATE COLUMN -------------
+#check all dates to be after a certain date
+reference_date <- as.Date("2019-01-01")
+
+# counts how many dates are before the reference date
+dates_before <- sum(df_opt1$Date < reference_date, na.rm = TRUE)
+dates_before
+dates <- df_opt1$Date[df_opt1$Date < reference_date]
+dates
+
+#create delta date column for timestamps
+calculate_delta_date <- function(df, patient_col, date_col) {
+  
+  df$delta_date <- unlist(by(
+    df, 
+    df[[patient_col]], 
+    function(sub_df) {
+      
+      first_date <- sub_df[[date_col]][1]
+     
+      delta <- as.numeric(difftime(sub_df[[date_col]], first_date, units = "days"))
+      return(delta)
+    }
+  ))
+  
+  return(df)
+}
+
+df_opt1 <- calculate_delta_date(df_opt1, "CAI", "Date")
 
 saveRDS(df_opt1,'filled_dataset.rds')
