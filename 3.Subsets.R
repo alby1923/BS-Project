@@ -4,6 +4,17 @@ library(dplyr)
 
 df_wide <- readRDS('flattened_dataset.rds')
 
+#STANDARDIZE COVARIATES -----------
+#needed to fix a little bug after flattening dataset
+df_wide$Alcool <- round(df_wide$Alcool)
+df_wide$Fumo <- round(df_wide$Fumo)
+df_wide$Attivita_fisica <- round(df_wide$Attivita_fisica)
+
+for(j in 1:ncol(df_wide)){
+  if(!(j %in% c(1,2,6,18,22,32,36))){
+    df_wide[,j] <- scale(df_wide[,j],center = TRUE, scale = TRUE)
+  }
+}
 #FILLER OF NA IN DATASET ----------------
 
 library(lubridate) # For handling date differences
@@ -12,8 +23,6 @@ library(data.table)  # Added for efficient data manipulation
 # Ensure the Date column is in Date format
 df_wide <- df_wide %>%
   mutate(Date = as.Date(Date))
-
-# Function to fill missing values based on the nearest available value within a specified delay
 fill_missing_values <- function(data, cols_to_fill, id_col, date_col, delay_days) {
   # Create a progress bar
   pb <- progress_bar$new(
@@ -45,13 +54,19 @@ fill_missing_values <- function(data, cols_to_fill, id_col, date_col, delay_days
             if (length(nn_dates) == 0) {
               NA
             } else {
-              # Calculate the difference in days
-              diffs <- abs(as.numeric(difftime(current_date, nn_dates, units = "days")))
+              # Calculate the difference in days with previous and future dates
+              diffs_previous <- abs(as.numeric(difftime(current_date, nn_dates, units = "days")))
+              diffs_future <- abs(as.numeric(difftime(nn_dates, current_date, units = "days")))
+              
+              # Combine both differences (previous and future)
+              diffs_combined <- c(diffs_previous, diffs_future)
+              nn_combined_values <- c(nn_values, nn_values)
+              
               # Find the minimum difference within delay_days
-              if (min(diffs) <= delay_days) {
-                # Get the index of the closest date
-                closest_idx <- which.min(diffs)
-                nn_values[closest_idx]
+              if (min(diffs_combined) <= delay_days) {
+                # Get the index of the closest date (either previous or future)
+                closest_idx <- which.min(diffs_combined)
+                nn_combined_values[closest_idx]
               } else {
                 NA
               }
@@ -70,7 +85,7 @@ fill_missing_values <- function(data, cols_to_fill, id_col, date_col, delay_days
   return(data)
 }
 
-delay <- 90
+delay <- 15
 columns_to_fill <- c(
   "Alanina_aminotransferasi_alt",
   "Albumina",
@@ -103,12 +118,11 @@ columns_to_fill <- c(
   "S_gamma_globuline",
   "Trigliceridi",
   "Volume_medio",
-  #  "Alcool",
-  #  "Attivita_fisica",
-  "Circonferenza_vita"
-  #  "Fumo"
+    "Alcool",
+   "Attivita_fisica",
+  "Circonferenza_vita",
+    "Fumo"
 )
-
 
 df_filled <- fill_missing_values(
   data = df_wide,
@@ -166,7 +180,6 @@ return(df)
 
 names = c("Colesterolo_Hdl","Circonferenza_vita","Glucosio","PMAX","Trigliceridi")
 df_responses_filled <- subset_dataset(df_filled,names)
-
 #PLOT TO SEE HOW MANY NA -----------
 
 # Define the function
@@ -225,12 +238,12 @@ plot_na_counts(
 plot_na_percentages(df_responses_filled)
 #DATASET WITHOUT ANY NA IN A ROW ----------
 columns_to_keep <- c(
-  "Alanina_aminotransferasi_alt",
+  #"Alanina_aminotransferasi_alt",
   #"Albumina",
   "Altezza",
   "Colesterolo_Hdl",
   "Colesterolo_totale",
-  "Creatinina",
+  #"Creatinina",
   "Distribuzione_di_volume",
   "Ematocrito_hct",
   "Emoglobina_conc_media_mchc",
@@ -238,7 +251,7 @@ columns_to_keep <- c(
   "Emoglobina_massa_media_mch",
   "Eosinofili_perc",
   "Eritrociti_rbc",
-  "Ferritina",
+  #"Ferritina",
   #"Ferro_totale",
   "Glucosio",
   "Leucociti_wbc",
@@ -248,7 +261,7 @@ columns_to_keep <- c(
   "Peso",
   "Piastrine",
   "Polso",
-  "Proteine_totali",
+  #"Proteine_totali",
   #"S_alfa_1_globuline",
   #"S_alfa_2_globuline",
   #"S_beta_1_globuline",
@@ -256,13 +269,13 @@ columns_to_keep <- c(
   #"S_gamma_globuline",
   "Trigliceridi",
   "Volume_medio",
-  #  "Alcool",
-  #  "Attivita_fisica",
-  "Circonferenza_vita"
-  #  "Fumo"
+  "Alcool",
+  "Attivita_fisica",
+  "Circonferenza_vita",
+  "Fumo"
 )
 
-df_opt <- subset_dataset(df_responses_filled,columns_to_keep)
-df_opt <- df_opt[,columns_to_keep]
+df_opt1 <- subset_dataset(df_responses_filled,columns_to_keep)
+df_opt1 <- df_opt1[,columns_to_keep]
 
-saveRDS(df_opt,'filled_dataset.rds')
+saveRDS(df_opt1,'filled_dataset.rds')

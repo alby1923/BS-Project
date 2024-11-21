@@ -1,4 +1,5 @@
 #LOAD DATA ------------
+
 df <- readRDS('final_dataset.RDS')
 
 #remove columns with all NULL values
@@ -231,6 +232,31 @@ for(index in target_cols){
   }
 }
 
-#CHANGE FACTORS TO NUMERICAL VARIABLES (TO DO!) -----------
+#CHANGE FACTORS TO NUMERICAL VARIABLES -----------
+
+#CHANGE FACTORS TO NUMERICAL VARIABLES
+# Define mappings for each factor column
+map_alcool <- function(x) {
+  as.numeric(factor(x, levels = c("Assunzione_giornaliera", "Assunzione_saltuaria"), labels = c(1, 2)))
+}
+
+map_fumo <- function(x) {
+  as.numeric(factor(x, levels = c("Sì", "No"), labels = c(1, 2)))
+}
+
+map_attivita_fisica <- function(x) {
+  as.numeric(factor(x, levels = c("Attiva", "Moderata", "Sedentaria"), labels = c(1, 2, 3)))
+}
+
+# Apply mappings to the respective columns
+df$Alcool <- lapply(df$Alcool, map_alcool)
+df$Fumo <- lapply(df$Fumo, map_fumo)
+df$Attivita_fisica <- lapply(df$Attivita_fisica, map_attivita_fisica)
+
+# Convert lists to vectors if necessary (if the structure requires)
+df$Alcool <- sapply(df$Alcool, unlist)
+df$Fumo <- sapply(df$Fumo, unlist)
+df$Attivita_fisica <- sapply(df$Attivita_fisica, unlist)
+
 #CREATE FINAL FILE --------------
 saveRDS(df,'cleaned_dataset.rds')

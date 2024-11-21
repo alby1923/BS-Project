@@ -7,9 +7,9 @@ df_stan <- readRDS('filled_dataset.rds')
 #df_stan <- df_stan[order(df_stan[, 1]), ]
 #STAN MODEL -------------
 
-#need to keep only patients with at least 4 observations (TO DO)
+#need to keep only patients with at least 4 observations (TO DO) --------
 
-#linear model (or maybe other ideas for variable selection) to cut non-significant variables (TO DO)
+#linear model (or maybe other ideas for variable selection) to cut non-significant variables (TO DO) ------
 
 data_stan <- function(df,variables_to_keep,response){
 #data needed for the model
@@ -32,12 +32,9 @@ return(data_model)
 
 #keep just significan covariates and cut responses
 chosen_columns <- c(
-  "Alanina_aminotransferasi_alt",
-  #"Albumina",
   "Altezza",
-  "Colesterolo_Hdl",
+  #"Colesterolo_Hdl",
   "Colesterolo_totale",
-  "Creatinina",
   "Distribuzione_di_volume",
   "Ematocrito_hct",
   "Emoglobina_conc_media_mchc",
@@ -45,28 +42,20 @@ chosen_columns <- c(
   "Emoglobina_massa_media_mch",
   "Eosinofili_perc",
   "Eritrociti_rbc",
-  "Ferritina",
-  #"Ferro_totale",
   #"Glucosio",
   "Leucociti_wbc",
   "Linfociti_perc",
   "Monociti_perc",
-  "PMAX",
+  #"PMAX",
   "Peso",
   "Piastrine",
   "Polso",
-  "Proteine_totali",
-  #"S_alfa_1_globuline",
-  #"S_alfa_2_globuline",
-  #"S_beta_1_globuline",
-  #"S_beta_2_globuline",
-  #"S_gamma_globuline",
-  "Trigliceridi",
+  #"Trigliceridi",
   "Volume_medio",
-  #  "Alcool",
-  #  "Attivita_fisica",
-  "Circonferenza_vita"
-  #  "Fumo"
+    "Alcool",
+    "Attivita_fisica",
+  #"Circonferenza_vita",
+  "Fumo"
 )
 
 

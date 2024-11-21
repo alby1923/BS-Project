@@ -1,4 +1,4 @@
-# FLATTEN THE DATA --------
+# FLATTEN THE DATA
 
 # Libraries
 library(dplyr)
@@ -148,6 +148,5 @@ df_wide <- df_long_agg %>%
 # Convert Date column to Date type
 df_wide$Date <- as.Date(df_wide$Date)
 
-#STANDARDIZE COVARIATES (NOT RESPONSES) ---------
-
 saveRDS(df_wide,'flattened_dataset.rds')
+
