@@ -1,8 +1,32 @@
 library(progress)
 library(ggplot2)
 library(rstan)
+library(dplyr)
 
 df_stan <- readRDS('filled_dataset.rds')
+# counts how many dates are before the reference date
+reference_date <- as.Date("2019-01-01")
+dates_before <- sum(df_stan$Date < reference_date, na.rm = TRUE)
+dates_before #many variables started being tracked from 2019 on
+#compute the delta time from first osbervation for each patient
+df_stan <- df_stan[order(df_stan$CAI), ]
+calculate_delta_date <- function(df, patient_col, date_col) {
+  
+  df$delta_date <- unlist(by(
+    df, 
+    df[[patient_col]], 
+    function(sub_df) {
+      
+      first_date <- sub_df[[date_col]][1]
+      
+      delta <- as.numeric(difftime(sub_df[[date_col]], first_date, units = "days"))
+      return(delta)
+    }
+  ))
+  
+  return(df)
+}
+df_stan <- calculate_delta_date(df_stan, "CAI", "Date")
 
 #FILTER DATASET (OBSERVATIONS AND COVARIATES) -------------
 #need to keep only patients with at least 4 observation
@@ -27,7 +51,7 @@ df_stan_4obs <- minimum_observations(df_stan,4)
 model <- lm(Glucosio~ . - CAI - Date - delta_date - Glucosio - Colesterolo_Hdl - PMAX - Trigliceridi - Circonferenza_vita, data = df_stan)
 summary(model)
 #comment below discarded variable
-#STAN MOEL -------
+#STAN MODEL -------
 data_stan <- function(df,variables_to_keep,response){
 #data needed for the model
 patients_mat <- as.matrix(unique(df[,1]))
@@ -72,70 +96,212 @@ chosen_columns <- c(
     "Alcool",
     "Attivita_fisica",
   #"Circonferenza_vita",
-  "Fumo",
+ "Fumo",
   "Rh",
   "SESSO",
   "AB0"
   #,"delta_date"
 )
-
-response <- as.vector(df_stan$Glucosio) #CHANGE HERE!
+#Colesterolo_Hdl, Circonferenza_vita, Glucosio, PMAX, Trigliceridi, trained one each (no for loop due to problems with saving traceplot)
+response <- as.vector(df_stan$PMAX) #CHANGE HERE!
 data_for_model <- data_stan(df_stan,chosen_columns,response)
 
 parallel::detectCores()
 #change values for simulation
 fit = stan(file = 'model_base.stan', 
                     data = data_for_model, 
-                    chains = 2, 
+                    chains = 4, 
                     iter = 2000, 
                     warmup = 1000, 
-                     cores = 2,
+                     cores = 4,
                     thin = 1, 
                     seed = 19)
 
 summary(fit, pars = c("beta", "sigma_e"))
 traceplot(fit, pars = c(paste0("beta[", 1:length(chosen_columns), "]"), "sigma_e"))
 print(fit, pars = c("beta", "sigma_e"))
-#add something to see convergence of chains??
+
+folder_name <- paste0("STAN_Model")
+#dir.create(folder_name)
+file_path <- file.path(folder_name, paste0("fit_PMAX_new.Rdata"))
+save(fit, file = file_path)
 
 #RESULT ANALYSIS -------------
-
-#extract results
-posterior_samples <- extract(fit)
-#access to y_hat
-y_hat <- posterior_samples$y_hat
-y_hat_point <- colMeans(y_hat, na.rm = TRUE) #can be done mean, median or mode. matrix is number of iterations * number of observations
-#obtain residuals
-res <- response - y_hat_point
-
-#stuff to assess how the model performed (need to add something and eventually fix this part)
-rss <- sum(res^2)
-rmse <- sqrt(rss/dim(df_stan)[1])
-sd_y <- sd(response)
-RMSE_to_sd_ratio <- rmse / sd_y
-
-#RESIDUAL ANALYSIS -----------
-
-#group residuals and y_hat for each patient
-patient_id <- df_stan$CAI
-res_grouped <- split(res, patient_id)
-y_hat_grouped <- split(y_hat_point,patient_id)
-
-#study autocorrelation of residuals
-
-#filter patients ith at least 10 observations
-res_grouped_filtered <- res_grouped[sapply(res_grouped, length) >= 10]
-#associates timestamps
-res_grouped_with_timestamp <- lapply(names(res_grouped_filtered), function(patient_id) {
-  patient_data <- res_grouped_filtered[[patient_id]]  # Dati del paziente
-  # Ottieni i timestamp per quel paziente
-  patient_timestamps <- df_stan[df_stan$CAI == patient_id, "delta_date"]
+target_variables <- c("Colesterolo_Hdl","Circonferenza_vita","Glucosio","PMAX","Trigliceridi")
+res_list <- list()
+folder_name <- paste0("STAN_Model")
+for(target in target_variables){
+  cat('target: ',target)
+  load(paste0("fit_",target,"_new.RData"))
+  response <- df_stan[,target]
+  #extract results and obtain residuals
+  posterior_samples <- extract(fit)
+  y_hat <- posterior_samples$y_hat
+  y_hat_point <- colMeans(y_hat, na.rm = TRUE) #matrix is number of iterations * number of observations
+  #y_hat_point <- apply(y_hat, 2, median, na.rm = TRUE) #try with the median
+  res <- t(response - y_hat_point)
+  res_list[[target]] <- res
+  #analyze performance
+  rss <- sum(res^2)
+  cat('\nRSS: ',rss)
+  rmse <- sqrt(rss/dim(df_stan)[1]) 
+  cat('\nRMSE: ',rmse)
+  RMSE_to_sd_ratio <- rmse / sd(t(response))
+  cat('\nRMSE/SD: ',RMSE_to_sd_ratio)
   
-  # Associa timestamp ai dati del paziente
-  data.frame(observations = patient_data, timestamp = patient_timestamps)
-})
-# COMPUTE AUTOCORRELATION (TO DO)
+  p <- ggplot(data.frame(t(res)), aes(x = t(res))) +
+    geom_histogram(aes(y = ..density..), bins = 30, fill = "lightblue", color = "black", alpha = 0.7) +
+    geom_density(color = "red", size = 1.5) +  # Aggiungi la curva di densità
+    #stat_function(fun = dnorm, args = list(mean = mean(res), sd = sd(res)), color = "green", size = 1.5) +  # Aggiungi una curva normale teorica
+    labs(title = paste("Residuals Histogram", target), x = "Valore", y = "Densità") +
+    theme_minimal()
+  # Salva il grafico come immagine PNG
+  ggsave(paste0(folder_name, "/residuals_histogram_", target, ".png"), plot = p, width = 6, height = 4)
+  cat('\n-------------------------------\n\n\n')
+}
+#AUTOCORRELATION ---------
+fake_pacf <- function(res_grouped_with_timestamps) {
+  # Creare una lista vuota per raccogliere i valori per ciascun lag
+  pacf_results <- list()
+  
+  # Loop attraverso ciascun gruppo (time series + timestamps)
+  for (CAI in names(res_grouped_with_timestamps)) {
+    group <- res_grouped_with_timestamps[[CAI]]
+    ts <- group$results
+    ts_time <- group$timestamps
+    
+    # Calcolare la media della serie temporale
+    mu <- mean(ts)
+    
+    # Calcolare il massimo lag possibile
+    max_lag <- max(ts_time) - min(ts_time)
+    
+    for (lag in 1:max_lag) {
+      # Trova tutte le coppie di timestamp distanziate da 'lag'
+      pairs <- combn(seq_along(ts_time), 2, simplify = FALSE)
+      valid_pairs <- Filter(function(p) abs(ts_time[p[2]] - ts_time[p[1]]) == lag, pairs)
+      
+      if (length(valid_pairs) > 0) {
+        # Calcolare la covarianza per questo lag
+        cov <- sum(sapply(valid_pairs, function(p) {
+          (ts[p[1]] - mu) * (ts[p[2]] - mu)
+        })) / length(valid_pairs)
+        
+        # Calcolare la varianza della serie temporale
+        var_ts <- sum((ts - mu)^2) / (length(ts) - 1)
+        
+        # Calcolare la correlazione (covarianza / varianza)
+        correlation <- cov / var_ts
+        
+        # Aggiungere il valore alla lista del lag corrispondente
+        lag_key <- paste0("lag", lag)
+        pacf_results[[lag_key]] <- c(pacf_results[[lag_key]], correlation)
+      }
+    }
+  }
+  
+  pacf_df <- data.frame(
+    lag = sprintf("%02d", as.numeric(gsub("lag", "", names(pacf_results)))),  # Assegna i lag con il formato "01", "02", ...
+    mean_value = sapply(pacf_results, mean, na.rm = TRUE),
+    count = sapply(pacf_results, length)
+  )
+  
+  return(pacf_df)
+}
+#loop for on residuals
+target_variables <- c("Colesterolo_Hdl","Circonferenza_vita","Glucosio","PMAX","Trigliceridi")
+df_list <- list()
+for(target in target_variables){
+  cat('\nstarting: ',target)
+  res <- res_list[[target]]
+  #group residuals to each patient and take only time series with at least 3 obs
+  patient_id <- df_stan$CAI
+  res_grouped <- split(res, patient_id)
+  res_grouped_filtered <- res_grouped[sapply(res_grouped, length) >= 3]
+  
+  #associate timestamp to each time series
+  res_grouped_with_filtered_timestamps <- lapply(names(res_grouped_filtered), function(CAI) {
+    group <- res_grouped_filtered[[CAI]]
+    relevant_timestamps <- unname(df_stan$delta_date[df_stan$CAI == CAI]%/%90)
+    list(
+      results = group,         
+      timestamps = relevant_timestamps  
+    )
+  })
+  names(res_grouped_with_filtered_timestamps) <- names(res_grouped_filtered)
+  
+  #compute the fake PACF for irregular timestamps
+  df_model <- fake_pacf(res_grouped_with_filtered_timestamps)
+  df_model <- rbind(data.frame(lag = "0", mean_value = 1, count = 0), df_model)
+  #df$lag <- factor(df$lag, levels = c("lag0", paste0("lag", 1:max(as.numeric(gsub("lag", "", df$lag))))))
+  df_list[[target]] <- df_model
+}
 
+df_vita <- df_list[['Circonferenza_vita']]
+df_col <- df_list[["Colesterolo_Hdl"]]
+df_gluc <- df_list[["Glucosio"]]
+df_pmax <- df_list[["PMAX"]]
+df_trig <- df_list[["Trigliceridi"]]
+
+merged_data <- full_join(df_vita, df_col, by = "lag", suffix = c("_vita", "_col")) %>%
+  full_join(df_gluc, by = "lag", suffix = c("_col", "_gluc")) %>%
+  full_join(df_pmax, by = "lag", suffix = c("_gluc", "_pmax")) %>%
+  full_join(df_trig, by = "lag", suffix = c("_pmax", "_trig"))
+
+#substitute NA with zero
+merged_data <- merged_data %>%
+  mutate(
+    mean_value_vita = ifelse(is.na(mean_value_vita), 0, mean_value_vita),
+    mean_value_col = ifelse(is.na(mean_value_col), 0, mean_value_col),
+    mean_value_gluc = ifelse(is.na(mean_value_gluc), 0, mean_value_gluc),
+    mean_value_pmax = ifelse(is.na(mean_value_pmax), 0, mean_value_pmax),
+    mean_value = ifelse(is.na(mean_value), 0, mean_value),
+    count_vita = ifelse(is.na(count_vita), 0, count_vita),
+    count_col = ifelse(is.na(count_col), 0, count_col),
+    count_gluc = ifelse(is.na(count_gluc), 0, count_gluc),
+    count_pmax = ifelse(is.na(count_pmax), 0, count_pmax),
+    count = ifelse(is.na(count), 0, count)
+  )
+
+#compute weighted values
+result <- merged_data %>%
+  mutate(
+    weighted_value = (mean_value_vita * count_vita + mean_value_col * count_col + mean_value_gluc * count_gluc + 
+                        mean_value_pmax * count_pmax + mean_value * count) / 
+      (count_vita + count_col + count_gluc + count_pmax + count),
+    total_count = count_vita + count_col + count_gluc + count_pmax +count
+  ) %>%
+  select(lag, weighted_value, total_count)
+
+#pacf lag0 always equal to 1
+result[1, "weighted_value"] = 1
+
+# Calcolare max e min value escluso 1 per le linee tratteggiate nere
+max_value <- max(result$weighted_value[result$weighted_value != 1])
+min_value <- min(result$weighted_value[result$weighted_value != 1])
+
+# Crea un grafico a dispersione per visualizzare i valori PACF medi
+ggplot(result, aes(x = lag, y = weighted_value)) +
+  geom_point(color = "blue", size = 3) +  # Punti per ogni lag
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +  # Linea rossa a zerohttp://127.0.0.1:26863/graphics/plot_zoom_png?width=980&height=712
+  geom_hline(yintercept = max_value, color = "black", linetype = "dashed") +  # Linea nera al max valore
+  geom_hline(yintercept = min_value, color = "black", linetype = "dashed") +  # Linea nera al min valore
+  # Aggiungere le linee perpendicolari dai punti alla linea rossa
+  geom_segment(aes(x = lag, xend = lag, y = weighted_value, yend = 0), color = "blue") +  # Linea perpendicolare da ogni punto a y = 0
+  # Aggiungere le etichette per il massimo e il minimo
+  geom_text(aes(x = lag[weighted_value == max_value], y = max_value, label = paste("Max:", round(max_value, 2))),
+            color = "black", vjust = -1, size = 3) +  # Etichetta per il massimo
+  geom_text(aes(x = lag[weighted_value == min_value], y = min_value, label = paste("Min:", round(min_value, 2))),
+            color = "black", vjust = 1.5, size = 3) +  # Etichetta per il minimo
+  theme_minimal() +  # Tema minimalista
+  labs(title = "PACF: Mean Values by Lag",
+       x = "Lag",
+       y = "Mean PACF Value") +
+  theme(axis.text.x = element_blank()) +  # Ruota le etichette sull'asse x
+  ylim(-1, 1)  # Imposta i limiti dell'asse y da -1 a 1
+
+file_path <- file.path(folder_name, paste0("df_pacf_combined.Rdata"))
+save(result, file = file_path)
 
 
 
