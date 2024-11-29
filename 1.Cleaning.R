@@ -146,7 +146,26 @@ rileva_e_correggi_spike <- function(serie,soglia){
   return(list(serie = serie, spike = flag))
 }
 
+save <- df
+list_30 <- c()
+list_20 <- c()
 #if in a sliding window of three it occurs a peak or a drop of more than 20 (or 30) it is swapped withe the median of that window
+for (i in 1:nrow(df)) {
+  to_print <- df$Peso[[i]]
+  risultato <- rileva_e_correggi_spike(df$Peso[[i]], 30)
+  
+  if (risultato$spike == 1) {
+    df$Peso[[i]] <- risultato$serie
+    cat("===========================================\n")
+    list_20 <- c(list_30, i)
+    cat("ANOMALIA RILEVATA - PESO\n")
+    cat("Osservazione: ", i, "\n")
+    cat("Serie originale: ", paste(to_print, collapse = ", "), "\n")
+    cat("Serie corretta:  ", paste(risultato$serie, collapse = ", "), "\n")
+    cat("===========================================\n\n")
+  }
+}
+df <- save
 for (i in 1:nrow(df)) {
   to_print <- df$Peso[[i]]
   risultato <- rileva_e_correggi_spike(df$Peso[[i]], 20)
@@ -154,6 +173,7 @@ for (i in 1:nrow(df)) {
   if (risultato$spike == 1) {
     df$Peso[[i]] <- risultato$serie
     cat("===========================================\n")
+    list_20 <- c(list_20, i)
     cat("ANOMALIA RILEVATA - PESO\n")
     cat("Osservazione: ", i, "\n")
     cat("Serie originale: ", paste(to_print, collapse = ", "), "\n")
@@ -162,6 +182,10 @@ for (i in 1:nrow(df)) {
   }
 }
 
+pat <- setdiff(list_20,list_30)
+for(i in pat){
+  cat('\nPatient ',i,' Circonferenza vita: ',)
+}
 for (i in 1:nrow(df)) {
   to_print <- df$Circonferenza_vita[[i]]
   risultato <- rileva_e_correggi_spike(df$Circonferenza_vita[[i]], 30)
@@ -257,6 +281,10 @@ df$Attivita_fisica <- lapply(df$Attivita_fisica, map_attivita_fisica)
 df$Alcool <- sapply(df$Alcool, unlist)
 df$Fumo <- sapply(df$Fumo, unlist)
 df$Attivita_fisica <- sapply(df$Attivita_fisica, unlist)
+
+#remove CAI duplicates
+library(dplyr)
+df <- df %>% distinct(CAI,.keep_all = TRUE)
 
 #CREATE FINAL FILE --------------
 saveRDS(df,'cleaned_dataset.rds')
