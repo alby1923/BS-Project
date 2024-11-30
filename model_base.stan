@@ -24,7 +24,7 @@ model {
   b ~ normal(mub, eta); //subj random effects
   //w ~ normal(0, sigma_w); //item random effects
   beta ~ normal(0,5);
-  sigma_e ~ normal(0,5);
+  sigma_e ~ inv_gamma(3,2); //normal(0,5)//(13,12)
   
   vector[T] mu;
   mu = X * beta + b[subj];
