@@ -146,34 +146,15 @@ rileva_e_correggi_spike <- function(serie,soglia){
   return(list(serie = serie, spike = flag))
 }
 
-save <- df
-list_30 <- c()
-list_20 <- c()
-#if in a sliding window of three it occurs a peak or a drop of more than 20 (or 30) it is swapped withe the median of that window
+counter <- 0
 for (i in 1:nrow(df)) {
   to_print <- df$Peso[[i]]
-  risultato <- rileva_e_correggi_spike(df$Peso[[i]], 30)
+  risultato <- rileva_e_correggi_spike(df$Peso[[i]], 50)
   
   if (risultato$spike == 1) {
     df$Peso[[i]] <- risultato$serie
     cat("===========================================\n")
-    list_20 <- c(list_30, i)
-    cat("ANOMALIA RILEVATA - PESO\n")
-    cat("Osservazione: ", i, "\n")
-    cat("Serie originale: ", paste(to_print, collapse = ", "), "\n")
-    cat("Serie corretta:  ", paste(risultato$serie, collapse = ", "), "\n")
-    cat("===========================================\n\n")
-  }
-}
-df <- save
-for (i in 1:nrow(df)) {
-  to_print <- df$Peso[[i]]
-  risultato <- rileva_e_correggi_spike(df$Peso[[i]], 20)
-  
-  if (risultato$spike == 1) {
-    df$Peso[[i]] <- risultato$serie
-    cat("===========================================\n")
-    list_20 <- c(list_20, i)
+    counter <- counter + 1
     cat("ANOMALIA RILEVATA - PESO\n")
     cat("Osservazione: ", i, "\n")
     cat("Serie originale: ", paste(to_print, collapse = ", "), "\n")
@@ -182,25 +163,22 @@ for (i in 1:nrow(df)) {
   }
 }
 
-pat <- setdiff(list_20,list_30)
-for(i in pat){
-  cat('\nPatient ',i,' Circonferenza vita: ',)
-}
+counter <- 0
 for (i in 1:nrow(df)) {
   to_print <- df$Circonferenza_vita[[i]]
-  risultato <- rileva_e_correggi_spike(df$Circonferenza_vita[[i]], 30)
+  risultato <- rileva_e_correggi_spike(df$Circonferenza_vita[[i]], 40)
   
   if (risultato$spike == 1) {
     df$Circonferenza_vita[[i]] <- risultato$serie
     cat("===========================================\n")
     cat("ANOMALIA RILEVATA - CIRCONFERENZA VITA\n")
+    counter <- counter + 1
     cat("Osservazione: ", i, "\n")
     cat("Serie originale: ", paste(to_print, collapse = ", "), "\n")
     cat("Serie corretta:  ", paste(risultato$serie, collapse = ", "), "\n")
     cat("===========================================\n\n")
   }
 }
-
 
 ##PMAX+POLSO ----------
 #for PMAX and POLSO we correct values which are unrealistic with the median o
