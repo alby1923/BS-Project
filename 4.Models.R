@@ -5,45 +5,6 @@ library(dplyr)
 
 df_stan <- readRDS('filled_dataset.rds')
 
-# counts how many dates are before the reference date
-reference_date <- as.Date("2019-01-01")
-dates_before <- sum(df_stan$Date < reference_date, na.rm = TRUE)
-dates_before #many variables started being tracked from 2019 on
-#compute the delta time from first osbervation for each patient
-df_stan <- df_stan[order(df_stan$CAI), ]
-calculate_delta_date <- function(df, patient_col, date_col) {
-  
-  df$delta_date <- unlist(by(
-    df, 
-    df[[patient_col]], 
-    function(sub_df) {
-      
-      first_date <- sub_df[[date_col]][1]
-      
-      delta <- as.numeric(difftime(sub_df[[date_col]], first_date, units = "days"))
-      return(delta)
-    }
-  ))
-  
-  return(df)
-}
-df_stan <- calculate_delta_date(df_stan, "CAI", "Date")
-
-#add age column
-ages <- readRDS('final_dataset.rds')
-ages <- ages %>%
-  distinct(CAI, .keep_all = TRUE)
-df_stan <- df_stan %>%
-  left_join(ages %>% select(CAI, DATA_NASCITA), by = "CAI")
-df_stan <- df_stan %>%
-  mutate(eta = as.numeric(difftime(Date, DATA_NASCITA, units = "days")) / 365) %>%
-  select(-DATA_NASCITA)
-
-df_stan$eta_std <- scale(df_stan$eta, center = TRUE, scale = TRUE)
-
-df_stan <- na.omit(df_stan)
-
-saveRDS(df_stan,'completed_dataset.rds')
 #STAN MODEL -------
 data_stan <- function(df,variables_to_keep,response){
 #data needed for the model
