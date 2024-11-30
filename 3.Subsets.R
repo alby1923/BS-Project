@@ -189,7 +189,6 @@ df_filled <- fill_missing_values(
   date_col = "Date",
   delay_days = delay
 )
-
 #DATASET WITH NO NA IN GIVEN COLUMNS --------
 
 subset_dataset <- function(df_wide,names){
@@ -389,6 +388,20 @@ calculate_delta_date <- function(df, patient_col, date_col) {
   return(df)
 }
 
+df_opt1 <- df_opt1[order(df_opt1$CAI), ]
 df_opt1 <- calculate_delta_date(df_opt1, "CAI", "Date")
+save <- df_opt1
+
+#add age column
+ages <- readRDS('final_dataset.rds')
+ages <- ages %>%
+  distinct(CAI, .keep_all = TRUE)
+df_opt1 <- df_opt1 %>%
+  left_join(ages %>% select(CAI, DATA_NASCITA), by = "CAI")
+df_opt1 <- df_opt1 %>%
+  mutate(eta = as.numeric(difftime(Date, DATA_NASCITA, units = "days")) / 365) %>%
+  select(-DATA_NASCITA)
+
+df_opt1$eta_std <- scale(df_opt1$eta, center = TRUE, scale = TRUE)
 
 saveRDS(df_opt1,'filled_dataset.rds')
