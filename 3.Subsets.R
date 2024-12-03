@@ -463,5 +463,9 @@ df_opt2 <- df_opt2 %>%
 
 df_opt2$eta_std <- scale(df_opt2$eta, center = TRUE, scale = TRUE)
 
+#remove NA from age column
+df_opt1 <- df_opt1[!is.na(df_opt1$eta), ]
+df_opt2 <- df_opt2[!is.na(df_opt2$eta), ]
+
 saveRDS(df_opt1,'filled_dataset.rds')
 saveRDS(df_opt2, 'to_simulate.rds')
