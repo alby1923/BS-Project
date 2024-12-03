@@ -216,7 +216,7 @@ return(df)
 }
 
 names = c("Colesterolo_Hdl","Circonferenza_vita","Glucosio","PMAX","Trigliceridi")
-df_responses_filled <- subset_dataset(df_filled,names)
+df_responses_filled <- subset_dataset(df_filled,names) #no missing values in target variables
 #PLOT TO SEE HOW MANY NA -----------
 
 # Define the function
@@ -313,6 +313,7 @@ plot_na_counts(
   ylim_max = 105000
 )
 plot_na_percentages(df_responses_filled)
+plot_na_percentages(df_filled)
 #DATASET WITHOUT ANY NA IN A ROW ----------
 columns_to_keep <- c(
   "CAI",
@@ -357,8 +358,55 @@ columns_to_keep <- c(
   'AB0'
 )
 
+columns_to_keep_simulated <- c( #version for the simulated one
+  "CAI",
+  "Date",
+  #"Alanina_aminotransferasi_alt",
+  #"Albumina",
+  "Altezza",
+  #"Colesterolo_Hdl",
+  #"Colesterolo_totale",
+  #"Creatinina",
+  "Distribuzione_di_volume",
+  "Ematocrito_hct",
+  "Emoglobina_conc_media_mchc",
+  "Emoglobina_hb",
+  "Emoglobina_massa_media_mch",
+  "Eosinofili_perc",
+  "Eritrociti_rbc",
+  #"Ferritina",
+  #"Ferro_totale",
+  #"Glucosio",
+  "Leucociti_wbc",
+  "Linfociti_perc",
+  "Monociti_perc",
+  #"PMAX",
+  "Peso",
+  "Piastrine",
+  "Polso",
+  #"Proteine_totali",
+  #"S_alfa_1_globuline",
+  #"S_alfa_2_globuline",
+  #"S_beta_1_globuline",
+  #"S_beta_2_globuline",
+  #"S_gamma_globuline",
+  #"Trigliceridi",
+  "Volume_medio",
+  #"Alcool",
+  #"Attivita_fisica",
+  #"Circonferenza_vita",
+  #"Fumo",
+  'Rh',
+  'SESSO',
+  'AB0'
+)
+
 df_opt1 <- subset_dataset(df_responses_filled,columns_to_keep)
 df_opt1 <- df_opt1[,columns_to_keep]
+
+target_variables <- c("Colesterolo_Hdl","Circonferenza_vita","Trigliceridi","Glucosio","PMAX")
+df_opt2 <- subset_dataset(df_filled,columns_to_keep_simulated)
+df_opt2 <- df_opt2[,c(columns_to_keep_simulated,target_variables)]
 
 #DELTA DATE COLUMN -------------
 #check all dates to be after a certain date
@@ -390,18 +438,30 @@ calculate_delta_date <- function(df, patient_col, date_col) {
 
 df_opt1 <- df_opt1[order(df_opt1$CAI), ]
 df_opt1 <- calculate_delta_date(df_opt1, "CAI", "Date")
-save <- df_opt1
+
+df_opt2 <- df_opt2[order(df_opt2$CAI), ]
+df_opt2 <- calculate_delta_date(df_opt2, "CAI", "Date")
 
 #add age column
 ages <- readRDS('final_dataset.rds')
 ages <- ages %>%
   distinct(CAI, .keep_all = TRUE)
+
 df_opt1 <- df_opt1 %>%
   left_join(ages %>% select(CAI, DATA_NASCITA), by = "CAI")
 df_opt1 <- df_opt1 %>%
   mutate(eta = as.numeric(difftime(Date, DATA_NASCITA, units = "days")) / 365) %>%
   select(-DATA_NASCITA)
-
 df_opt1$eta_std <- scale(df_opt1$eta, center = TRUE, scale = TRUE)
 
+
+df_opt2 <- df_opt2 %>%
+  left_join(ages %>% select(CAI, DATA_NASCITA), by = "CAI")
+df_opt2 <- df_opt2 %>%
+  mutate(eta = as.numeric(difftime(Date, DATA_NASCITA, units = "days")) / 365) %>%
+  select(-DATA_NASCITA)
+
+df_opt2$eta_std <- scale(df_opt2$eta, center = TRUE, scale = TRUE)
+
 saveRDS(df_opt1,'filled_dataset.rds')
+saveRDS(df_opt2, 'to_simulate.rds')
