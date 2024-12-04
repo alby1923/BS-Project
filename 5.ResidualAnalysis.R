@@ -4,6 +4,7 @@ library(rstan)
 library(dplyr)
 
 df_stan <- readRDS('df_filled_raw.rds')
+#aggiungere la variabile età, vedi codice 4.
 
 #FUNCTIONS --------
 subset_dataset <- function(df_wide,names){
@@ -758,3 +759,7 @@ ggplot(df, aes(x = lag, y = mean_value)) +
 my_df[['PMAX']] <- df
 rm(fit_p)
 
+
+folder_name <- "STAN_Marginal"
+file_path <- file.path(folder_name, paste0("lags.Rdata"))
+save(my_df, file = file_path)
