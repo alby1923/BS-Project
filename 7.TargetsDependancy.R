@@ -23,7 +23,7 @@ data_stan <- function(df,variables_to_keep,response){
   subj <- rep(seq_along(tot_obs_patient), times = tot_obs_patient)
   
   data_model = list(N = N, P = dim(covariates)[2], T = T, 
-                    subj = subj, y = response, y_trasl = y_trasl, X = covariates)
+                    subj = subj, y = response, X = covariates)
   
   return(data_model)
 }
