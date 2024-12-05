@@ -1,9 +1,9 @@
 library(rstan)
 
-df_stan <- readRDS('datasets/ultimate_dataset.rds')
+df_stan <- readRDS('ultimate_dataset.rds')
 
 data_stan <- function(df,variables_to_keep,target_variables,lags){
-  T <- dim(df)[1]
+
   df_trans_list <- list()
   for (i in seq_along(lags)) {
     df1 <- df %>%
@@ -16,28 +16,26 @@ data_stan <- function(df,variables_to_keep,target_variables,lags){
           delta_date - lag(delta_date, default = 0)
         ),
         ar_flag = if_else(
-          successive_timestamps <= lags[i] & successive_timestamps != 0, 
+          successive_timestamps <= lags[i] & successive_timestamps > 0, #if zero it is the first observation of the donor
           1, 
-          0
+          0 #if less than zero it means that in delta_date - lag(delta_date, default = 0) it took the last observation of the previous donor
         ))%>%
       ungroup()  
     df_trans_list[[i]] <- df1
   }
   
-  y_trasl <- matrix(0, nrow = length(target_variables), ncol = T)
-  
+  y_trasl <- matrix(0, nrow = length(target_variables), ncol = dim(df)[1])
   
   k = 0
   for (target in target_variables){
     k = k+1
-      df2 <- df_trans_list[[k]]
-      response <- df[[target]]
-      aux <- df2[['ar_flag']] * lag(response, default = 0)
-      for(j in 1:length(aux)){
-        y_trasl[k,j] <- aux[j]
-      }
+    df2 <- df_trans_list[[k]]
+    response <- df[[target]]
+    aux <- df2[['ar_flag']] * lag(response, default = 0)
+    for(j in 1:length(aux)){
+      y_trasl[k,j] <- aux[j]
     }
-  
+  }
   
   #data needed for the model
   patients_mat <- as.matrix(unique(df[,1]))
@@ -93,14 +91,12 @@ chosen_columns <- c(
   'eta_std'
 )
 
-target_variables <- c("Glucosio","Colesterolo_Hdl","Trigliceridi", "PMAX")
+target_variables <- c("Glucosio","Colesterolo_Hdl","PMAX","Trigliceridi") #PUT THEM IN ORDER OF DEPENDANCY! "Circonferenza_vita"
 
-df_reduced <- df_stan[1:1000,]
-
-lags <- c(100,200,300,400)
+lags <- c(100,200,300,400) #max window allowed for previous observation in autoregressive component
 data_model <- data_stan(df_reduced,chosen_columns,target_variables,lags)
 
-fit = stan(file = 'BS-Project/model_final.stan', 
+fit = stan(file = 'model_final.stan', 
            data = data_model, 
            chains = 1, 
            iter = 20, 
@@ -109,4 +105,3 @@ fit = stan(file = 'BS-Project/model_final.stan',
            thin = 1,
            seed = 19)
 
-traceplot(fit, pars = c(paste0("alpha[", 1:33, "]"), "sigma_e"))
