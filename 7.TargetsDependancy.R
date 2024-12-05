@@ -127,7 +127,8 @@ target_variables <- c("Colesterolo_Hdl","Circonferenza_vita","Glucosio","PMAX","
 res_list <- list()
 
 for (target in target_variables){
-  res_list[[target]] <- load(paste0("Residuals_", target, ".Rdata"))
+  load(paste0("Residuals_", target, ".Rdata"))
+  res_list[[target]] <- res
 }
 
 #create residuals matrix and use library
