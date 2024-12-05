@@ -4,7 +4,7 @@ data {
   int<lower=1> N;          // Number of donors
   int<lower=1> P;          // Number of covariates
   int<lower=1> T;          // Total number of observations
-  int<lower=1> K;          // Number of target variables (e.g., K=4)
+  int<lower=1> K;          // Number of target variables
   
   int<lower=1, upper=N> subj[T];    // Donor ID for each observation
   matrix[T, P] X;                    // Predictor matrix
@@ -44,7 +44,7 @@ model {
   eta ~ inv_gamma(3, 2);
   
   alpha ~ normal(mub, eta);            // Donor-specific effects
-  Phi ~ normal(0, 5);                  // Target-specific intercepts
+  phi ~ normal(0, 5);                  // Target-specific intercepts
   to_vector(beta) ~ normal(0, 5);      // Coefficients for covariates
   
   // Priors for gamma_raw (lower triangular)
@@ -64,7 +64,7 @@ model {
   // Likelihood
   for (k in 1:K) {
     // Initialize the linear predictor
-    vector[T] mu_k = X * beta[, k] + alpha[subj] + Phi[k];
+    vector[T] mu_k = X * beta[, k] + alpha[subj] + phi[k];
     
     // Add dependencies on previous Y's only if k > 1
     if (k > 1) {
@@ -83,7 +83,7 @@ generated quantities {
   
   for (k in 1:K) {
     // Initialize the linear predictor
-    y_hat[, k] = X * beta[, k] + alpha[subj] + Phi[k];
+    y_hat[, k] = X * beta[, k] + alpha[subj] + phi[k];
     
     // Add dependencies on previous Y's only if k > 1
     if (k > 1) {
