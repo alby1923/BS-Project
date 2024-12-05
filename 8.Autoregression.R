@@ -9,7 +9,7 @@ dir.create('STAN_...') #add your target instead of ...
 folder_name <- paste0("STAN_...") #add your target instead of ...
 
 #STAN MODEL -------
-data_stan <- function(df,variables_to_keep,response){
+data_stan <- function(df,variables_to_keep,response,threshold){
   #data needed for the model
   patients_mat <- as.matrix(unique(df[,1]))
   patients <- as.vector(patients_mat)
@@ -17,7 +17,7 @@ data_stan <- function(df,variables_to_keep,response){
   T <- dim(df)[1]
   #data <- as.vector(df[,response]) #save response data
   covariates <- df[,variables_to_keep] #remove response (and useless) covariates
-  
+
   df <- df %>%
     group_by(CAI) %>%
     arrange(delta_date, .by_group = TRUE) %>%
@@ -28,7 +28,7 @@ data_stan <- function(df,variables_to_keep,response){
         delta_date - lag(delta_date, default = 0)
       ),
       ar_flag = if_else(
-        successive_timestamps <= AAA & successive_timestamps != 0, #put instead of AAA the lag for your response
+        successive_timestamps <= threshold & successive_timestamps != 0, #put instead of AAA the lag for your response
         1, 
         0
       ))%>%
@@ -44,6 +44,7 @@ data_stan <- function(df,variables_to_keep,response){
   
   return(data_model)
 }
+
 bayes_R2 <- function(posterior_samples) {
   y_pred <- posterior_samples$y_obs_hat
   var_fit <- apply(y_pred, 1, var)
@@ -82,7 +83,7 @@ chosen_columns <- c(
 #Colesterolo_Hdl, Circonferenza_vita, Glucosio, PMAX, Trigliceridi, trained one each
 
 target <- as.vector(df_stan$...) #add your target instead of ...
-data_for_model <- data_stan(df_stan,chosen_columns,target)
+data_for_model <- data_stan(df_stan,chosen_columns,target,...) #ADD HERE YOUR THRESHOLD
 
 #change values for simulation
 fit = stan(file = 'model_autoregressive.stan', 
@@ -92,7 +93,6 @@ fit = stan(file = 'model_autoregressive.stan',
            warmup = 500, 
            cores = 2,
            thin = 1,
-           #control = list(adapt_delta = 0.95), may increase running time but better mix of chains. minimum value = 0.8 (default)
            seed = 19)
 
 q <- traceplot(fit, pars = c(paste0("beta[", 1:length(chosen_columns), "]"), "sigma_e"))
