@@ -5,8 +5,6 @@ library(dplyr)
 
 df_stan <- readRDS('ultimate_dataset.rds')
 
-#df_stan <- na.omit(df_stan)
-
 dir.create('STAN_...') #add your target instead of ...
 folder_name <- paste0("STAN_...") #add your target instead of ...
 
@@ -30,7 +28,7 @@ data_stan <- function(df,variables_to_keep,response){
         delta_date - lag(delta_date, default = 0)
       ),
       ar_flag = if_else(
-        successive_timestamps <= 180 & successive_timestamps != 0, 
+        successive_timestamps <= AAA & successive_timestamps != 0, #put instead of AAA the lag for your response
         1, 
         0
       ))%>%
@@ -38,9 +36,6 @@ data_stan <- function(df,variables_to_keep,response){
   
   y_trasl <- lag(response, default = 0) * df$ar_flag
   
-  #y_trasl_matrix <- matrix(y_trasl, nrow = 1, ncol = length(y_trasl))
-  
-  #tot_obs_patient <- table(df$CAI)
   tot_obs_patient <- as.vector(table(df$CAI)[match(patients_mat, names(table(df$CAI)))])
   subj <- rep(seq_along(tot_obs_patient), times = tot_obs_patient)
   
@@ -107,7 +102,14 @@ ggsave(paste0(folder_name, "/Traceplots of ....png"), plot = q, width = 6, heigh
 posterior_samples <- extract(fit)
 
 r2 <- bayes_R2(posterior_samples)
-k <- hist(r2)
+k <- ggplot(data.frame(r2 = r2), aes(x = r2)) +
+  geom_histogram(binwidth = 0.0001, fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    title = paste("Histogram of..."), #add your target instead of ...
+    x = '...', #add your target instead of ...
+    y = "Density"
+  ) +
+  theme_minimal()
 ggsave(paste0(folder_name, "/Bayesian R2 of ....png"), plot = k, width = 6, height = 4) #add your target instead of ... but leave last . before png
 print(mean(r2)) #save this value in the txt file created at the end of this code
 
