@@ -131,4 +131,76 @@ for (target in target_variables){
   res_list[[target]] <- res
 }
 
-#create residuals matrix and use library
+res_data <- do.call(rbind, res_list)
+
+res_data <- t(res_data)
+
+bdgraph = bdgraph.mpl(res_data,iter = 20000)
+summary(bdgraph)
+
+# Load necessary libraries
+library(igraph)
+
+# Define the p_links matrix (probability of connections)
+p_links <- matrix(c(
+  0, 0.95, 0, 1, 1,
+  0, 0.00, 0, 0, 0,
+  0, 0.00, 0, 1, 0, 
+  0, 0.00, 0, 0, 1, 
+  0, 0.00, 0, 0, 0  
+), nrow = 5, byrow = TRUE)
+
+
+# Create an igraph object
+graph <- graph_from_adjacency_matrix(p_links, mode = "directed", diag = FALSE)
+
+# Set vertex labels to the target variables
+V(graph)$label <- target_variables
+
+# Plot the graph
+plot(graph, 
+     vertex.size = 30,           # Adjust the vertex size
+     vertex.color = "lightblue", # Color of the vertices
+     vertex.label.color = "black",  # Color of the labels
+     vertex.label.cex = 1.2,     # Font size of the labels
+     edge.arrow.size = 0.5,      # Arrow size
+     edge.width = 2,             # Edge width
+     main = "Dependency Graph of Target Variables") # Title of the plot
+
+#REAL DATA GRAPH ------------------
+real_data <- df_stan[,target_variables]
+
+bdgraph = bdgraph.mpl(real_data,iter = 20000)
+summary(bdgraph)
+
+# Load necessary libraries
+library(igraph)
+
+# Define the p_links matrix (probability of connections)
+p_links <- matrix(c(0, 0, 0, 0, 0,
+                    1, 0, 0, 0, 0,
+                    1, 1, 0, 0, 0,
+                    1, 1, 1, 0, 0,
+                    1, 1, 1, 1, 0), 
+                  nrow = 5, 
+                  byrow = TRUE)
+
+# Define the names of your target variables
+target_variables <- c("Colesterolo_Hdl", "Circonferenza_vita", "Glucosio", "PMAX", "Trigliceridi")
+
+# Create an igraph object
+graph <- graph_from_adjacency_matrix(p_links, mode = "directed", diag = FALSE)
+
+# Set vertex labels to the target variables
+V(graph)$label <- target_variables
+
+# Plot the graph
+plot(graph, 
+     vertex.size = 30,           # Adjust the vertex size
+     vertex.color = "lightblue", # Color of the vertices
+     vertex.label.color = "black",  # Color of the labels
+     vertex.label.cex = 1.2,     # Font size of the labels
+     edge.arrow.size = 0.5,      # Arrow size
+     edge.width = 2,             # Edge width
+     main = "Dependency Graph of Target Variables") # Title of the plot
+
