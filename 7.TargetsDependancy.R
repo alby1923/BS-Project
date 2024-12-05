@@ -28,7 +28,7 @@ data_stan <- function(df,variables_to_keep,response){
   return(data_model)
 }
 bayes_R2 <- function(posterior_samples) {
-  y_pred <- posterior_samples$y_obs_hat
+  y_pred <- posterior_samples$y_hat
   var_fit <- apply(y_pred, 1, var)
   var_res <- posterior_samples$sigma_e
   var_fit / (var_fit + var_res)
@@ -62,7 +62,7 @@ chosen_columns <- c(
   'eta_std'
 )
 
-#Colesterolo_Hdl, Circonferenza_vita, Glucosio, PMAX, Trigliceridi, trained one each
+#Circonferenza_vita, Glucosio, PMAX trained one each
 
 target <- as.vector(df_stan$...) #add your target instead of ...
 data_for_model <- data_stan(df_stan,chosen_columns,target)
@@ -85,7 +85,14 @@ ggsave(paste0(folder_name, "/Traceplots of ....png"), plot = q, width = 6, heigh
 posterior_samples <- extract(fit)
 
 r2 <- bayes_R2(posterior_samples)
-k <- hist(r2)
+k <- ggplot(data.frame(r2 = r2), aes(x = r2)) +
+  geom_histogram(binwidth = 0.0001, fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    title = paste("Histogram of..."), #add your target instead of ...
+    x = '...', #add your target instead of ...
+    y = "Density"
+  ) +
+  theme_minimal()
 ggsave(paste0(folder_name, "/Bayesian R2 of ....png"), plot = k, width = 6, height = 4) #add your target instead of ... but leave last . before png
 print(mean(r2)) #save this value in the txt file created at the end of this code
 
@@ -94,7 +101,7 @@ y_hat <- posterior_samples$y_hat
 y_hat_point <- colMeans(y_hat, na.rm = TRUE)
 res <- t(target - y_hat_point)
 
-file_path <- file.path(folder_name, "Residuals_....Rdata") #add your target instead of ...
+file_path <- file.path(folder_name, "Residuals_....Rdata") #add your target instead of ...but leave last . before Rdata
 save(res, file = file_path)
 
 #save this values in the txt file created at the end of this code
@@ -120,7 +127,7 @@ target_variables <- c("Colesterolo_Hdl","Circonferenza_vita","Glucosio","PMAX","
 res_list <- list()
 
 for (target in target_variables){
-  res_list[[target]] <- load(paste0("residuals_", target, ".Rdata"))
+  res_list[[target]] <- load(paste0("Residuals_", target, ".Rdata"))
 }
 
 #create residuals matrix and use library
