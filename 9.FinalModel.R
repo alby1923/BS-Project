@@ -3,7 +3,7 @@ library(rstan)
 df_stan <- readRDS('ultimate_dataset.rds')
 
 data_stan <- function(df,variables_to_keep,target_variables,lags){
-
+  
   df_trans_list <- list()
   for (i in seq_along(lags)) {
     df1 <- df %>%
@@ -16,7 +16,7 @@ data_stan <- function(df,variables_to_keep,target_variables,lags){
           delta_date - lag(delta_date, default = 0)
         ),
         ar_flag = if_else(
-          successive_timestamps <= lags[i] & successive_timestamps > 0, #if zero it is the first observation of the donor
+          successive_timestamps <= lags[i] & successive_timestamps != 0, #if zero it is the first observation of the donor
           1, 
           0 #if less than zero it means that in delta_date - lag(delta_date, default = 0) it took the last observation of the previous donor
         ))%>%
