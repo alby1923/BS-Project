@@ -98,6 +98,10 @@ fit = stan(file = 'model_autoregressive.stan',
 q <- traceplot(fit, pars = c(paste0("beta[", 1:length(chosen_columns), "]"), "sigma_e"))
 ggsave(paste0(folder_name, "/Traceplots of ....png"), plot = q, width = 6, height = 4) #add your target instead of ... but leave last . before png
 
+t = traceplot(fit, pars = "phi")
+quantile(extract(fit, pars = "phi")[[1]], probs = c(0.05, 0.95))
+ggsave(paste0(folder_name, "/Traceplot of autoregressive coefficient of ....png"), plot = t, width = 6, height = 4)  #add your target instead of ... but leave last . before png
+
 #extract results and obtain residuals
 posterior_samples <- extract(fit)
 
@@ -105,7 +109,7 @@ r2 <- bayes_R2(posterior_samples)
 k <- ggplot(data.frame(r2 = r2), aes(x = r2)) +
   geom_histogram(binwidth = 0.0001, fill = "blue", color = "black", alpha = 0.7) +
   labs(
-    title = paste("Histogram of..."), #add your target instead of ...
+    title = paste("Histogram of ..."), #add your target instead of ...
     x = '...', #add your target instead of ...
     y = "Density"
   ) +
@@ -130,6 +134,6 @@ cat('\nRMSE/SD: ',RMSE_to_sd_ratio)
 p <- stan_dens(fit, pars = "sigma_e")
 ggsave(paste0(folder_name, "/Sigma posterior distribution of ....png"), plot = p, width = 6, height = 4) #add your target instead of ... but leave last . before png
 
-summary_stats <- summary(fit, pars = c("beta", "sigma_e"))
+summary_stats <- summary(fit, pars = c("beta","sigma_e",'phi'))
 summary_text <- capture.output(print(summary_stats))
 writeLines(summary_text, con = paste0(folder_name, "/Summary of ....txt")) #add your target instead of ... but leave last . before txt
