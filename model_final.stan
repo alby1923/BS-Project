@@ -15,7 +15,7 @@ parameters {
   matrix[K, K] gamma_raw;   // Unconstrained gamma matrix for priors (includes upper triangular)
   matrix[P, K] beta;        // Coefficients for each covariate and target
   vector[N] alpha;          // Donor-specific intercepts
-  vector[K] Phi;            // Target-specific intercepts
+  vector[K] phi;            // Target-specific intercepts
   
   real mub;                 // Hyperparameter: mean of alpha
   real<lower=0> eta;        // Hyperparameter: SD of alpha
