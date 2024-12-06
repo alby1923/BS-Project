@@ -5,8 +5,8 @@ library(dplyr)
 
 df_stan <- readRDS('ultimate_dataset.rds')
 
-dir.create('STAN_...') #add your target instead of ...
-folder_name <- paste0("STAN_...") #add your target instead of ...
+dir.create('STAN_autoregressive_...') #add your target instead of ...
+folder_name <- paste0("STAN_autoregressive_...") #add your target instead of ...
 
 #STAN MODEL -------
 data_stan <- function(df,variables_to_keep,response,threshold){
@@ -28,7 +28,7 @@ data_stan <- function(df,variables_to_keep,response,threshold){
         delta_date - lag(delta_date, default = 0)
       ),
       ar_flag = if_else(
-        successive_timestamps <= threshold & successive_timestamps != 0, #put instead of AAA the lag for your response
+        successive_timestamps <= threshold & successive_timestamps != 0,
         1, 
         0
       ))%>%
@@ -46,7 +46,7 @@ data_stan <- function(df,variables_to_keep,response,threshold){
 }
 
 bayes_R2 <- function(posterior_samples) {
-  y_pred <- posterior_samples$y_obs_hat
+  y_pred <- posterior_samples$y_hat
   var_fit <- apply(y_pred, 1, var)
   var_res <- posterior_samples$sigma_e
   var_fit / (var_fit + var_res)
@@ -83,7 +83,7 @@ chosen_columns <- c(
 #Colesterolo_Hdl, Circonferenza_vita, Glucosio, PMAX, Trigliceridi, trained one each
 
 target <- as.vector(df_stan$...) #add your target instead of ...
-data_for_model <- data_stan(df_stan,chosen_columns,target,...) #ADD HERE YOUR THRESHOLD
+data_for_model <- data_stan(df_stan,chosen_columns,target,...) #add your threshold instead of ...
 
 #change values for simulation
 fit = stan(file = 'model_autoregressive.stan', 
