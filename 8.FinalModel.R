@@ -97,7 +97,7 @@ target_variables <- c("Glucosio","Colesterolo_Hdl","PMAX","Trigliceridi") #PUT T
 
 df_stan_filtrato <- df_stan %>%
   group_by(CAI) %>%                  # Raggruppa per paziente
-  filter(n() >= 20) %>%             # Mantieni solo i gruppi con almeno 10 osservazioni
+  filter(n() >= 20) %>%             # Mantieni solo i gruppi con almeno 20 osservazioni
   ungroup()                         # Rimuovi il raggruppamento
 
 lags <- c(0,180,0,0) #max window allowed for previous observation in autoregressive component, if 0 it means no autoregressive component
@@ -106,11 +106,12 @@ data_model <- data_stan(df_stan_filtrato,chosen_columns,target_variables,lags)
 fit = stan(file = 'model_final.stan', 
            data = data_model, 
            chains = 2, 
-           iter = 10, 
-           warmup = 5, 
+           iter = 1000, 
+           warmup = 500, 
            cores = 2,
            thin = 1,
            seed = 19)
+
 #TRACEPLOTS --------------
 dir.create('STAN_Final')
 folder_name <- 'STAN_Final'
@@ -204,3 +205,110 @@ for (k in 1:K) {
   writeLines(summary_text, con = paste0(folder_name, "/Summary of ", target_name, ".txt"))
   cat('\n--------------------------\n')
 }
+
+#RISK FACTORS -----------------
+
+target_variables <- c("Colesterolo_Hdl","Circonferenza_vita","Glucosio","PMAX","Trigliceridi")
+df_stan_clusters <- df_stan
+
+for (target in target_variables) {
+  df_stan_clusters[[target]] <- exp(df_stan_clusters[[target]])
+}
+
+# Definizione delle soglie per ogni variabile
+glucosio_threshold <- 100
+trigliceridi_threshold <- 150
+pmax_threshold <- 130
+circonferenza_vita_maschi_threshold <- 102
+circonferenza_vita_femmine_threshold <- 88
+colesterolo_maschi_threshold <- 40
+colesterolo_femmine_threshold <- 50
+
+# Creazione della variabile risk_factor
+df_stan_clusters$risk_factor <- NA  # inizializza la variabile
+
+# Funzione per calcolare il rischio
+for (i in 1:nrow(df_stan_clusters)) {
+  # Estrai i valori per ogni osservazione
+  glucosio <- df_stan_clusters$Glucosio[i]
+  trigliceridi <- df_stan_clusters$Trigliceridi[i]
+  pmax <- df_stan_clusters$PMAX[i]
+  circonferenza_vita <- df_stan_clusters$Circonferenza_vita[i]
+  colesterolo <- df_stan_clusters$Colesterolo_Hdl[i]
+  sesso <- df_stan_clusters$SESSO[i]
+  
+  # Determina il sesso: se negativo, è maschio, altrimenti femmina
+  if (sesso < 0) {
+    sesso <- "maschio"
+    circonferenza_threshold <- circonferenza_vita_maschi_threshold
+    colesterolo_threshold <- colesterolo_maschi_threshold
+  } else {
+    sesso <- "femmina"
+    circonferenza_threshold <- circonferenza_vita_femmine_threshold
+    colesterolo_threshold <- colesterolo_femmine_threshold
+  }
+  
+  # Verifica le condizioni per ciascuna variabile
+  risk_count <- 0
+  
+  # Condizioni per glucosio
+  if (glucosio > glucosio_threshold) risk_count <- risk_count + 1
+  
+  # Condizioni per trigliceridi
+  if (trigliceridi > trigliceridi_threshold) risk_count <- risk_count + 1
+  
+  # Condizioni per pmax
+  if (pmax > pmax_threshold) risk_count <- risk_count + 1
+  
+  # Condizioni per circonferenza_vita
+  if (circonferenza_vita > circonferenza_threshold) risk_count <- risk_count + 1
+  
+  # Condizioni per colesterolo
+  if (colesterolo < colesterolo_threshold) risk_count <- risk_count + 1
+  
+  # Assegna il rischio in base al numero di condizioni soddisfatte
+  if (risk_count >= 3) {
+    df_stan_clusters$risk_factor[i] <- "HIGH"
+  } else if (risk_count == 2) {
+    df_stan_clusters$risk_factor[i] <- "MEDIUM"
+  } else {
+    df_stan_clusters$risk_factor[i] <- "LOW"
+  }
+}
+
+# Carica ggplot2 se non è già caricato
+library(ggplot2)
+
+# Creiamo un grafico a barre che mostra la distribuzione della variabile risk_factor
+ggplot(df_stan_clusters, aes(x = risk_factor, fill = risk_factor)) +
+  geom_bar(stat = "count", show.legend = FALSE) +  # Conta le osservazioni per ogni categoria
+  scale_fill_manual(values = c("HIGH" = "red", "MEDIUM" = "yellow", "LOW" = "green")) +  # Colori personalizzati per ogni categoria
+  labs(
+    title = "Distribuzione del fattore di rischio",  # Titolo del grafico
+    x = "Fattore di rischio",  # Etichetta asse X
+    y = "Numero di osservazioni"  # Etichetta asse Y
+  ) +
+  theme_minimal() +  # Tema del grafico
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotazione delle etichette sull'asse X
+    plot.title = element_text(hjust = 0.5),  # Centra il titolo
+    axis.title = element_text(size = 12),  # Imposta la dimensione del titolo dell'asse
+    axis.text = element_text(size = 10)  # Imposta la dimensione del testo sugli assi
+  )
+
+#CLUSTERS --------
+
+data_for_model_clusters <- list(
+  N = nrow(df_stan),
+  D = length(chosen_columns),
+  X = df_stan[,chosen_columns]
+)
+
+fit = stan(file = 'model_clusters.stan', 
+           data = data_for_model_clusters, 
+           chains = 2, 
+           iter = 1000, 
+           warmup = 500, 
+           cores = 2,
+           thin = 1,
+           seed = 19)

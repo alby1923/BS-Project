@@ -130,6 +130,9 @@ cat('\nRMSE: ',rmse)
 RMSE_to_sd_ratio <- rmse / sd(t(target))
 cat('\nRMSE/SD: ',RMSE_to_sd_ratio)
 
+file_path <- file.path(folder_name, "Residuals_....Rdata") #add your target instead of ...but leave last . before Rdata
+save(res, file = file_path)
+
 #plot posterior distribution of sigma
 p <- stan_dens(fit, pars = "sigma_e")
 ggsave(paste0(folder_name, "/Sigma posterior distribution of ....png"), plot = p, width = 6, height = 4) #add your target instead of ... but leave last . before png
@@ -137,3 +140,4 @@ ggsave(paste0(folder_name, "/Sigma posterior distribution of ....png"), plot = p
 summary_stats <- summary(fit, pars = c("beta","sigma_e",'phi'))
 summary_text <- capture.output(print(summary_stats))
 writeLines(summary_text, con = paste0(folder_name, "/Summary of ....txt")) #add your target instead of ... but leave last . before txt
+
