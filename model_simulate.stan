@@ -20,7 +20,6 @@ parameters {
   real<lower=0> eta; // sd for subject intercepts
   real<lower=0> sigma_e; // error sd
   real mub; // mean for subject intercepts
-  //vector[n_miss] y_miss; // missing y values
 }
 
 model {
@@ -37,10 +36,7 @@ model {
 
   // Likelihood for observed y
   y_obs ~ normal(mu_obs, sigma_e);
-
-  // Prior predictive for missing y
-  // vector[n_miss] mu_miss;
-  // y_miss ~ normal(mu_miss, sigma_e);
+  
 }
 
 generated quantities {
