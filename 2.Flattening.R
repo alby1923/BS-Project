@@ -6,9 +6,9 @@ library(tidyr)
 library(purrr)
 
 # Split of the dataset in time-variant variables and time invariant
-df_Arrigoni <- readRDS("cleaned_dataset.rds")
-df_timeinv <- df_Arrigoni[, c("CAI", "SESSO", "DATA_NASCITA", "Rh", "AB0")]
-df_bloodvalues <- df_Arrigoni %>% select( -SESSO, -DATA_NASCITA, -Rh, -AB0,
+df_cleaned <- readRDS("cleaned_dataset.rds")
+df_timeinv <- df_cleaned[, c("CAI", "SESSO", "DATA_NASCITA", "Rh", "AB0")]
+df_bloodvalues <- df_cleaned %>% select( -SESSO, -DATA_NASCITA, -Rh, -AB0,
                                           -Eta_glucosio, -Eta_colesterolo, 
                                           -Eta_trigliceridi, -Eta_circonferenza, 
                                           -Eta_PMAX, -Eta_min)
