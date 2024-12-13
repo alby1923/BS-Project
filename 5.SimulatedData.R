@@ -49,7 +49,7 @@ plot_na_counts(
   variables = target_variables, 
   ylim_max = 90000
 )
-#remove rows with NA in PMAX and Glucosio since they are just a few (meaningless to run a 3 hours simulation for less than 4000 observations out 90k)
+#remove rows with NA in PMAX and Glucosio since they are just a few
 df_stan <- df_stan[!is.na(df_stan$PMAX) & !is.na(df_stan$Glucosio), ]
 #DATA SIMULATION ----------------
 data_stan <- function(df, variables_to_keep, response) {
@@ -135,7 +135,7 @@ df_stan_filtered <- df_stan_filtered %>%
   ungroup()
 }
 
-target_variables <- c("Circonferenza_vita","Colesterolo_Hdl","Trigliceridi") #
+target_variables <- c("Circonferenza_vita","Colesterolo_Hdl","Trigliceridi")
 for (target in target_variables){
   
   cat('\n Starting: ',target)
@@ -182,7 +182,6 @@ for (target in target_variables){
     ) +
     theme_minimal()
   ggsave(paste0(folder_name, "/Histogram of Bayesian R2 of ", target, ".png"), plot = k, width = 6, height = 4)
-  #print(mean(r2))
   
   simulated <- colMeans(posterior_samples$y_miss_hat)
   missing_indices <- which(is.na(df_stan_filtered[,target]))
