@@ -115,7 +115,6 @@ k <- ggplot(data.frame(r2 = r2), aes(x = r2)) +
   ) +
   theme_minimal()
 ggsave(paste0(folder_name, "/Bayesian R2 of ....png"), plot = k, width = 6, height = 4) #add your target instead of ... but leave last . before png
-print(mean(r2)) #save this value in the txt file created at the end of this code
 
 #analyze performance
 y_hat <- posterior_samples$y_hat
