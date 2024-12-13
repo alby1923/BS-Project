@@ -18,18 +18,14 @@ parameters {
   real phi; //real<lower=-1, upper=1> phi; //autoregressive coefficient
 }
 
-// The model to be estimated. We model the output
-// 'y' to be normally distributed with mean 'mu'
-// and standard deviation 'sigma'.
 model {
    //priors
   mub ~ normal(0, 2); //subj random effects
   eta ~ inv_gamma(3,2); //variance of intercepts
   b ~ normal(mub, eta); //subj random effects
-  //w ~ normal(0, sigma_w); //item random effects
   beta ~ normal(0,5);
-  sigma_e ~ inv_gamma(3,2); //normal(0,5)//(13,12)
-  phi ~ normal(0, 10); //if you dont want it to be a uniform
+  sigma_e ~ inv_gamma(3,2);
+  phi ~ normal(0, 5); //if you dont want it to be a uniform
   
   vector[T] mu;
   
@@ -39,11 +35,9 @@ model {
 }
 
 generated quantities {
-  //vector[T] log_lik; //log-likelihood
-  //real log_lik;
+  
   vector[T] y_hat; 
-
+  
    y_hat = (X * beta + b[subj]) + (phi * y_trasl);
-   //log_lik = normal_lpdf(y | y_hat, sigma_e); //prima passava tutto individuale, ora la somma, è ok?
 }
 
