@@ -22,22 +22,19 @@ model {
   mub ~ normal(0, 2); //subj random effects
   eta ~ inv_gamma(3,2); //variance of intercepts
   b ~ normal(mub, eta); //subj random effects
-  //w ~ normal(0, sigma_w); //item random effects
   beta ~ normal(0,5);
-  sigma_e ~ inv_gamma(3,2); //normal(0,5)//(13,12)
+  sigma_e ~ inv_gamma(3,2);
   
   vector[T] mu;
   mu = X * beta + b[subj];
   
   y ~ normal(mu, sigma_e);
 }
+
 generated quantities {
-  //vector[T] log_lik; //log-likelihood
-  //real log_lik;
+
   vector[T] y_hat; 
-   vector[T] mu;
 
    y_hat = X * beta + b[subj];
-   //log_lik = normal_lpdf(y | y_hat, sigma_e); //prima passava tutto individuale, ora la somma, è ok?
 
 }
