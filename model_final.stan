@@ -16,7 +16,6 @@ parameters {
   matrix[K, K] gamma_raw;   // Unconstrained gamma matrix for priors (includes upper triangular)
   matrix[P, K] beta;        // Coefficients for each covariate and target
   vector[N] alpha;          // Donor-specific intercepts
-  vector[K] phi;            // Target-specific intercepts
   
   real mub;                 // Hyperparameter: mean of alpha
   real<lower=0> eta;        // Hyperparameter: SD of alpha
@@ -40,7 +39,7 @@ transformed parameters {
   }
   
   for(k in 1:K){
-    if (k==2){
+    if (k==1 || k==2 || k==4){
       autoreg_coef[k] = autoreg_coef_raw[k];
     }
     else {
@@ -55,7 +54,6 @@ model {
   eta ~ inv_gamma(3, 2);
   
   alpha ~ normal(mub, eta);            // Donor-specific effects
-  phi ~ normal(0, 5);                  // Target-specific intercepts
   to_vector(beta) ~ normal(0, 5);      // Coefficients for covariates
   
   // Priors for gamma_raw (upper triangular)
@@ -80,7 +78,7 @@ model {
   // Likelihood
   for (k in 1:K) {
     // Initialize the linear predictor
-    vector[T] mu_k = X * beta[, k] + alpha[subj] + phi[k] + autoreg_coef[k] * to_vector(y_trasl[, k]) + y * gamma[,k];
+    vector[T] mu_k = X * beta[, k] + alpha[subj] + autoreg_coef[k] * to_vector(y_trasl[, k]) + y * gamma[,k];
     
     // Define the likelihood
     y[, k] ~ normal(mu_k, sigma_e[k]);
@@ -92,7 +90,7 @@ generated quantities {
   
   for (k in 1:K) {
     // Initialize the linear predictor
-    y_hat[, k] = X * beta[, k] + alpha[subj] + phi[k] + autoreg_coef[k] * to_vector(y_trasl[, k]);
+    y_hat[, k] = X * beta[, k] + alpha[subj] + autoreg_coef[k] * to_vector(y_trasl[, k]);
   }
   
   // Add contributions from dependencies on previous targets
