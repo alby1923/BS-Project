@@ -313,7 +313,7 @@ plot_na_counts(
   ylim_max = 105000
 )
 plot_na_percentages(df_responses_filled)
-plot_na_percentages(df_filled)
+plot_na_percentages(df_filled) #for the simulated one
 #DATASET WITHOUT ANY NA IN A ROW ----------
 columns_to_keep <- c(
   "CAI",
