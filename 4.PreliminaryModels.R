@@ -59,8 +59,8 @@ chosen_columns <- c(
  'eta_std'
   #,"delta_date"
 )
-#Colesterolo_Hdl, Circonferenza_vita, Glucosio, PMAX, Trigliceridi, trained one each (no for loop due to problems with saving traceplot)
-response <- as.vector(df_stan$Trigliceridi) #CHANGE HERE!
+#Colesterolo_Hdl, Circonferenza_vita, Glucosio, PMAX, Trigliceridi, trained one each
+response <- as.vector(df_stan$...) #CHANGE HERE!
 data_for_model <- data_stan(df_stan,chosen_columns,response)
 
 parallel::detectCores()
@@ -72,7 +72,6 @@ fit = stan(file = 'model_base.stan',
                     warmup = 1000, 
                      cores = 4,
                     thin = 1,
-                    #control = list(adapt_delta = 0.95), may increase running time but better mix of chains. minimum value = 0.8 (default)
                     seed = 19)
 
 summary(fit, pars = c("beta", "sigma_e"))
@@ -81,7 +80,7 @@ print(fit, pars = c("beta", "sigma_e"))
 
 folder_name <- paste0("STAN_Model")
 #dir.create(folder_name)
-file_path <- file.path(folder_name, paste0("fit_Trigliceridi_new.Rdata"))
+file_path <- file.path(folder_name, paste0("fit_..._new.Rdata"))
 save(fit, file = file_path)
 
 #RESULT ANALYSIS -------------
