@@ -217,43 +217,5 @@ summary_stats <- summary(fit, pars = c("beta","sigma_e"))
 summary_text <- capture.output(print(summary_stats))
 writeLines(summary_text, con = paste0(folder_name, "/Summary of Circonferenza_vita.txt"))
 
-#DATASET FOR CLASSIFIER -----------------
-#Initialize dataset
-classifier_df <- data.frame(
-  Circonferenza_vita_predicted = numeric(nrow(df_stan_last)),
-  Circonferenza_vita_percentage = numeric(nrow(df_stan_last)),
-  Colesterolo_Hdl_predicted = numeric(nrow(df_stan_last)),
-  Colesterolo_Hdl_percentage = numeric(nrow(df_stan_last)),
-  Trigliceridi_predicted = numeric(nrow(df_stan_last)),
-  Trigliceridi_percentage = numeric(nrow(df_stan_last)),
-  PMAX_predicted = numeric(nrow(df_stan_last)),
-  PMAX_percentage = numeric(nrow(df_stan_last)),
-  Glucosio_predicted = numeric(nrow(df_stan_last)),
-  Glucosio_percentage = numeric(nrow(df_stan_last)),
-  Metabolic_syndrome_probability = numeric(nrow(df_stan_last)),
-  Risk_score = df_stan_last$risk_score
-)
-
-#fill values for waist circumference (exp because they are log transformed)
-classifier_df$Circonferenza_vita_predicted <- exp(y_test_point)
-
-#threshold for metabolic syndrome
-threshold_m <- 102
-threshold_f <- 88
-
-#compute probability y_test_point > threshold for any observation empirically, hence count how many observations were higher than threshold
-for (i in 1:ncol(y_test)) {
-  #take values for sample i
-  samples_i <- exp(y_test[, i])
-  
-  if (df_stan_last$SESSO[i] == 'M') {
-    classifier_df$Circonferenza_vita_percentage[i] <- mean(samples_i > threshold_m)
-  } else {
-    classifier_df$Circonferenza_vita_percentage[i] <- mean(samples_i > threshold_f)
-  }
-}
-
-#save dataset
-saveRDS(classifier_df,'df_classifier.rds')
 
 

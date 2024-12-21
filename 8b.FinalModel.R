@@ -255,26 +255,4 @@ save(y_test_point, file = file_path)
 summary_stats <- summary(fit, pars = c("beta","sigma_e",'phi','gamma'))
 summary_text <- capture.output(print(summary_stats))
 writeLines(summary_text, con = paste0(folder_name, "/Summary of PMAX.txt")) ###
-#DATASET FOR CLASSIFIER -----------------
 
-#fill values for waist circumference (exp because they are log transformed)
-classifier_df$PMAX_predicted <- exp(y_test_point) ###
-
-#threshold for metabolic syndrome
-threshold_m <- 130
-threshold_f <- 130
-
-#compute probability y_test_point > threshold for any observation empirically, hence count how many observations were higher than threshold
-for (i in 1:ncol(y_test)) {
-  #take values for sample i
-  samples_i <- exp(y_test[, i])
-  
-  if (df_stan_last$SESSO[i] == 'M') {
-    classifier_df$PMAX_percentage[i] <- mean(samples_i > threshold_m) ###
-  } else {
-    classifier_df$PMAX_percentage[i] <- mean(samples_i > threshold_f) ###
-  }
-}
-
-#save dataset
-saveRDS(classifier_df,'df_classifier.rds')
