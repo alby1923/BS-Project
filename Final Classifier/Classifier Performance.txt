@@ -8,3 +8,6 @@ optimal_threshold not to have any false negative
 
 perc_YES	perc_NO
 5.773838        94.22616
+
+   Accuracy Sensitivity Specificity Precision  F1_Score
+  0.7592238           1   0.7444699 0.1934189 0.3241426
