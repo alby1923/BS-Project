@@ -1,0 +1,17 @@
+Altezza
+Ematocrito_hct
+Emoglobina_conc_media_mchc
+Emoglobina_hb
+Eosinofili_perc
+Leucociti_wbc
+Linfociti_perc
+Peso
+Piastrine
+Polso
+Alcool
+Attivita_fisica
+Fumo
+Rh
+AB0
+SESSO
+eta_std

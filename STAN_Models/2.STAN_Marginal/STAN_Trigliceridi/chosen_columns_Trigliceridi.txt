@@ -1,0 +1,12 @@
+Altezza
+Colesterolo_totale
+Distribuzione_di_volume
+Eosinofili_perc
+Eritrociti_rbc
+Leucociti_wbc
+Linfociti_perc
+Peso
+Rh
+AB0
+SESSO
+eta_std

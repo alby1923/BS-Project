@@ -1,0 +1,15 @@
+Altezza
+Distribuzione_di_volume
+Emoglobina_conc_media_mchc
+Emoglobina_massa_media_mch
+Eosinofili_perc
+Leucociti_wbc
+Linfociti_perc
+Monociti_perc
+Peso
+Piastrine
+Polso
+Volume_medio
+AB0
+SESSO
+eta_std

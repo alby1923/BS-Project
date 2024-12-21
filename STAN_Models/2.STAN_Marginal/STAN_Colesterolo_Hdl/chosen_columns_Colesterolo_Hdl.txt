@@ -1,0 +1,13 @@
+Colesterolo_totale
+Distribuzione_di_volume
+Emoglobina_conc_media_mchc
+Emoglobina_hb
+Eritrociti_rbc
+Leucociti_wbc
+Linfociti_perc
+Peso
+Piastrine
+Polso
+Rh
+SESSO
+eta_std
